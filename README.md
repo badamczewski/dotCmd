@@ -1,0 +1,2 @@
+# dotCmd
+A Better Console.
