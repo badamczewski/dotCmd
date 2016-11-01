@@ -93,6 +93,13 @@ namespace dotCmd.Native
             ref SMALL_RECT writeRegion
         );
 
+        [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool SetConsoleCursorPosition
+        (
+            IntPtr consoleOutput,
+            COORD cursorPosition
+        );
+        
         [StructLayout(LayoutKind.Sequential)]
         internal struct CONSOLE_SCREEN_BUFFER_INFO
         {

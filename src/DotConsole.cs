@@ -32,13 +32,15 @@ namespace dotCmd
 {
     public class DotConsole
     {
+        private const int maxBufferSize = 64000 / 4; //the struct is 4 bytes in size
+
+        public List<ContentRegion> regions = new List<ContentRegion>();
+
         public void Start()
         {
             //Set main thread name.
             System.Threading.Thread.CurrentThread.Name = ".Console host main thread";
             Console.OutputEncoding = System.Text.Encoding.Unicode;
-
-            GetOutputBuffer();
         }
 
         private Lazy<SafeFileHandle> outputBuffer = new Lazy<SafeFileHandle>(DotConsoleNative.CreateOutputBuffer);
@@ -48,9 +50,40 @@ namespace dotCmd
             return outputBuffer.Value;
         }
 
+        internal Coordinates GetOutputBufferWindowSize()
+        {
+            var buffer = GetOutputBuffer();
+            ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO info = DotConsoleNative.GetConsoleScreenBufferInfo(buffer);
+
+            return new Coordinates()
+            {
+                X = info.size.X,
+                Y = info.size.Y
+            };
+        }
+
+        internal Region GetOutputBufferWindow()
+        {
+            var buffer = GetOutputBuffer();
+            ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO info = DotConsoleNative.GetConsoleScreenBufferInfo(buffer);
+            
+            return new Region() { Left = info.window.Left, Top = info.window.Top, Height = info.window.Bottom, Width = info.window.Right };
+        }
+
+        public void AddContentRegion(ContentRegion region)
+        {
+            this.regions.Add(region);
+        }
+
         public void WriteLine(string text)
         {
+            foreach (var region in regions)
+                region.Hide();
+
             Console.Out.WriteLine(text);
+
+            foreach (var region in regions)
+                region.Show();
         }
 
         public void WriteOutput(Coordinates orgin, string[] content)
@@ -81,70 +114,113 @@ namespace dotCmd
         {
             var handle = GetOutputBuffer();
 
-            ConsoleHostNativeMethods.COORD bufferSize = new ConsoleHostNativeMethods.COORD();
-            bufferSize.X = (short)cellBuffer.GetLength(1);
-            bufferSize.Y = (short)cellBuffer.GetLength(0);
+            //Get len of X coordinate, the plan here is to partition by Y
+            var sizeOfX = cellBuffer.GetLength(1) * 4;
 
-            ConsoleHostNativeMethods.CHAR_INFO[] buffer = new ConsoleHostNativeMethods.CHAR_INFO[cellBuffer.Length];
+            int partitionY = (int)Math.Ceiling((decimal)(maxBufferSize / sizeOfX));
 
-            int idx = 0;
-            for (int i = 0; i < bufferSize.Y; i++)
+            var sizeOfY = cellBuffer.GetLength(0);
+
+            if(sizeOfY < partitionY)
             {
-                for (int k = 0; k < bufferSize.X; k++)
+                partitionY = sizeOfY;
+            }
+
+            int charBufferSize = (int)(partitionY * cellBuffer.GetLength(1));
+
+            int cursor = 0;
+
+            for (int i = partitionY; i <= sizeOfY; i += partitionY)
+            {
+                ConsoleHostNativeMethods.CHAR_INFO[] buffer = new ConsoleHostNativeMethods.CHAR_INFO[charBufferSize];
+                int idx = 0;
+                for (int y = cursor; y < i; y++)
                 {
-                    buffer[idx].Attributes = cellBuffer[i, k].Attributes;
-                    buffer[idx].UnicodeChar = cellBuffer[i, k].Char;
-                    idx++;
+                    for (int x = 0; x < cellBuffer.GetLength(1); x++)
+                    {
+                        buffer[idx].Attributes = cellBuffer[y, x].Attributes;
+                        buffer[idx].UnicodeChar = cellBuffer[y, x].Char;
+                        idx++;
+                    }
                 }
+
+                ConsoleHostNativeMethods.COORD bufferSize = new ConsoleHostNativeMethods.COORD();
+                bufferSize.X = (short)cellBuffer.GetLength(1);
+                bufferSize.Y = (short)partitionY;
+
+                ConsoleHostNativeMethods.COORD bufferCoord = new ConsoleHostNativeMethods.COORD();
+                bufferCoord.X = 0;
+                bufferCoord.Y = 0;
+
+                ConsoleHostNativeMethods.SMALL_RECT writeRegion = new ConsoleHostNativeMethods.SMALL_RECT();
+                writeRegion.Left = (short)orgin.X;
+                writeRegion.Top = (short)(orgin.Y + cursor);
+                writeRegion.Right = (short)(orgin.X + bufferSize.X - 1);
+                writeRegion.Bottom = (short)(orgin.Y + cursor + bufferSize.Y - 1);
+
+                DotConsoleNative.WriteConsoleOutput(handle, buffer, bufferSize, bufferCoord, ref writeRegion);
+
+                cursor += i;
+            }
+        }
+
+        public OutputCell[,] ReadOutput(Region region)
+        {
+            var handle = GetOutputBuffer();
+
+            //Get len of X coordinate, the plan here is to partition by Y
+            var sizeOfX = (region.Width - region.Left + 1) * 4;
+
+            var partitionY = Math.Ceiling((decimal)(maxBufferSize / sizeOfX));
+
+            int sizeOfY = (region.Height - region.Top + 1);
+
+            if (sizeOfY < partitionY)
+            {
+                partitionY = sizeOfY;
             }
 
             ConsoleHostNativeMethods.COORD bufferCoord = new ConsoleHostNativeMethods.COORD();
             bufferCoord.X = 0;
             bufferCoord.Y = 0;
 
-            ConsoleHostNativeMethods.SMALL_RECT writeRegion = new ConsoleHostNativeMethods.SMALL_RECT();
-            writeRegion.Left = (short)orgin.X;
-            writeRegion.Top = (short)orgin.Y;
-            writeRegion.Right = (short)(orgin.X + bufferSize.X - 1);
-            writeRegion.Bottom = (short)(orgin.Y + bufferSize.Y - 1);
-
-            DotConsoleNative.WriteConsoleOutput(handle, buffer, bufferSize, bufferCoord, ref writeRegion);
-        }
-
-
-        public OutputCell[,] ReadOutput(Region region)
-        {
-            var handle = GetOutputBuffer();
-
             ConsoleHostNativeMethods.COORD bufferSize = new ConsoleHostNativeMethods.COORD();
-
             bufferSize.X = (short)(region.Width - region.Left + 1);
-            bufferSize.Y = (short)(region.Height - region.Top + 1);
+            
+            OutputCell[,] cells = new OutputCell[sizeOfY, bufferSize.X];
 
-            ConsoleHostNativeMethods.CHAR_INFO[] buffer = new ConsoleHostNativeMethods.CHAR_INFO[bufferSize.X * bufferSize.Y];
-
-            ConsoleHostNativeMethods.COORD bufferCoord = new ConsoleHostNativeMethods.COORD();
-            bufferCoord.X = 0;
-            bufferCoord.Y = 0;
-
-            ConsoleHostNativeMethods.SMALL_RECT readRegion = new ConsoleHostNativeMethods.SMALL_RECT();
-            readRegion.Left = (short)region.Left;
-            readRegion.Top = (short)region.Top;
-            readRegion.Right = (short)(region.Left + bufferSize.X - 1);
-            readRegion.Bottom = (short)(region.Top + bufferSize.Y - 1);
-
-            buffer = DotConsoleNative.ReadConsoleOutput(handle, buffer, bufferSize, bufferCoord, ref readRegion);
-
-            OutputCell[,] cells = new OutputCell[bufferSize.Y, bufferSize.X];
-
-            int idx = 0;
-            for (int i = 0; i < bufferSize.Y; i++)
+            int cursor = 0;
+            for (int i = (int)partitionY; i <= sizeOfY; i += (int)partitionY)
             {
-                for (int k = 0; k < bufferSize.X; k++)
+                bufferSize.X = (short)(region.Width - region.Left + 1);
+                bufferSize.Y = (short)partitionY;
+
+                var sub = i - sizeOfY;
+                if (sub >= 0)
                 {
-                    cells[i, k].Attributes = buffer[idx].Attributes;
-                    cells[i, k].Char = buffer[idx].UnicodeChar;
-                    idx++;
+                    bufferSize.Y = (short)(partitionY - sub);
+                }
+
+                ConsoleHostNativeMethods.SMALL_RECT readRegion = new ConsoleHostNativeMethods.SMALL_RECT();
+
+                readRegion.Left = (short)region.Left;
+                readRegion.Top = (short)bufferCoord.Y;
+                readRegion.Right = (short)(region.Left + bufferSize.X - 1);
+                readRegion.Bottom = (short)(bufferCoord.Y + bufferSize.Y - 1);
+
+                ConsoleHostNativeMethods.CHAR_INFO[] buffer = new ConsoleHostNativeMethods.CHAR_INFO[bufferSize.X * bufferSize.Y];
+                buffer = DotConsoleNative.ReadConsoleOutput(handle, buffer, bufferSize, bufferCoord, ref readRegion);
+
+                int idx = 0;
+                for (int k = cursor; k < bufferSize.Y; k++)
+                {
+                    for (int n = 0; n < bufferSize.X; n++)
+                    {
+                        cells[k, n].Attributes = buffer[idx].Attributes;
+                        cells[k, n].Char = buffer[idx].UnicodeChar;
+                        idx++;
+                    }
+                    cursor = k;
                 }
             }
 

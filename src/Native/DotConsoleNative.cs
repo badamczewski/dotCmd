@@ -55,7 +55,8 @@ namespace dotCmd.Native
             return handle;
         }
 
-        internal static dotCmd.Native.ConsoleHostNativeMethods.CHAR_INFO[] WriteConsoleOutput(SafeFileHandle handle,
+        internal static dotCmd.Native.ConsoleHostNativeMethods.CHAR_INFO[] WriteConsoleOutput(
+            SafeFileHandle handle,
             dotCmd.Native.ConsoleHostNativeMethods.CHAR_INFO[] buffer,
             dotCmd.Native.ConsoleHostNativeMethods.COORD bufferSize,
             dotCmd.Native.ConsoleHostNativeMethods.COORD bufferCoord,
@@ -72,7 +73,8 @@ namespace dotCmd.Native
             return buffer;
         }
 
-        internal static dotCmd.Native.ConsoleHostNativeMethods.CHAR_INFO[] ReadConsoleOutput(SafeFileHandle handle,
+        internal static dotCmd.Native.ConsoleHostNativeMethods.CHAR_INFO[] ReadConsoleOutput(
+            SafeFileHandle handle,
             dotCmd.Native.ConsoleHostNativeMethods.CHAR_INFO[] buffer,
             dotCmd.Native.ConsoleHostNativeMethods.COORD bufferSize,
             dotCmd.Native.ConsoleHostNativeMethods.COORD bufferCoord,
@@ -87,6 +89,21 @@ namespace dotCmd.Native
             }
 
             return buffer;
+        }
+
+        internal static dotCmd.Native.ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO GetConsoleScreenBufferInfo(
+            SafeFileHandle handle)
+        {
+            ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO info = new ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO();
+            bool result = ConsoleHostNativeMethods.GetConsoleScreenBufferInfo(handle.DangerousGetHandle(), out info);
+
+            if (result == false)
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw CreateException("Cannot get output buffer info", err);
+            }            
+
+            return info;
         }
 
         public static uint ToNativeConsoleColor(ConsoleColor foreground, ConsoleColor background)

@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ContentRegion.cs" />
     <Compile Include="Coordinates.cs" />
     <Compile Include="DotConsole.cs" />
     <Compile Include="Native\BreakHandler.cs" />
