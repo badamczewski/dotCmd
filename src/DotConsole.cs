@@ -26,31 +26,58 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace dotCmd
 {
+    /// <summary>
+    /// A Better console.
+    /// </summary>
     public class DotConsole
     {
+        /// <summary>
+        /// Maximum buffer size that the NativeConsoleHost can handle.
+        /// </summary>
         private const int maxBufferSize = 64000 / 4; //the struct is 4 bytes in size
+        //Create a single output buffer.
+        private Lazy<SafeFileHandle> outputBuffer = new Lazy<SafeFileHandle>(DotConsoleNative.CreateOutputBuffer);
 
-        public List<ContentRegion> regions = new List<ContentRegion>();
+        private List<ContentRegion> regions = new List<ContentRegion>();
+        private ContentRegion main = null;
 
-        public void Start()
+        public DotConsole()
+        {
+            Initialize();
+        }
+
+        private void Initialize()
         {
             //Set main thread name.
             System.Threading.Thread.CurrentThread.Name = ".Console host main thread";
+            //Set encoding.
             Console.OutputEncoding = System.Text.Encoding.Unicode;
+
+            //Create the main content region.
+            //This might not be the efficient way since content regions are extremly expensive so this may change.
+            var size = this.GetOutputBufferWindowSize();
+            main = new ContentRegion(this, size, new Coordinates() { X = 0, Y = 0 }, ContentRegion.ContentPosition.Bottom, true);
         }
 
-        private Lazy<SafeFileHandle> outputBuffer = new Lazy<SafeFileHandle>(DotConsoleNative.CreateOutputBuffer);
-
+        /// <summary>
+        /// Creates the output buffer.
+        /// </summary>
+        /// <returns></returns>
         private SafeFileHandle GetOutputBuffer()
         {
             return outputBuffer.Value;
         }
 
-        internal Coordinates GetOutputBufferWindowSize()
+        /// <summary>
+        /// Gets the output buffer window size.
+        /// </summary>
+        /// <returns></returns>
+        public Coordinates GetOutputBufferWindowSize()
         {
             var buffer = GetOutputBuffer();
             ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO info = DotConsoleNative.GetConsoleScreenBufferInfo(buffer);
@@ -62,7 +89,11 @@ namespace dotCmd
             };
         }
 
-        internal Region GetOutputBufferWindow()
+        /// <summary>
+        /// Gets the output buffer windows as a rectangle.
+        /// </summary>
+        /// <returns></returns>
+        public Region GetOutputBufferWindow()
         {
             var buffer = GetOutputBuffer();
             ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO info = DotConsoleNative.GetConsoleScreenBufferInfo(buffer);
@@ -70,22 +101,62 @@ namespace dotCmd
             return new Region() { Left = info.window.Left, Top = info.window.Top, Height = info.window.Bottom, Width = info.window.Right };
         }
 
-        public void AddContentRegion(ContentRegion region)
+        /// <summary>
+        /// Registers a content region and reconfigures it so that they
+        /// are controled by this dotConsole instance.
+        /// </summary>
+        /// <param name="region"></param>
+        public void RegisterRegion(ContentRegion region)
         {
+            region.hasOwner = true;
             this.regions.Add(region);
         }
 
+        /// <summary>
+        /// Writes a line of text into the output buffer.
+        /// </summary>
+        /// <param name="text"></param>
         public void WriteLine(string text)
         {
+            //TODO we need to switch to double buffering using SetConsoleActiveScreenBuffer.
+            //Hide contents and show oryginal contents under the region.
             foreach (var region in regions)
                 region.Hide();
 
-            Console.Out.WriteLine(text);
+            //Write to main region.
+            main.WriteLine(text);
+            main.Render();
 
+            //Show content regions.
             foreach (var region in regions)
-                region.Show();
+                region.Render();
+
+            //Calculate curtor position.
+            //We only call this function a single time since moving the cursor between regions
+            //introduces lots of flicker.
+            CalculateCursorBetweenRegions();
         }
 
+        /// <summary>
+        /// Sets the cursor position.
+        /// </summary>
+        /// <param name="orgin"></param>
+        public void SetCursorPosition(Coordinates orgin)
+        {
+            var handle = GetOutputBuffer();
+           
+            DotConsoleNative.SetConsoleCursorPosition(handle, new ConsoleHostNativeMethods.COORD()
+            {
+                X = (short)(orgin.X),
+                Y = (short)(orgin.Y)
+            });
+        }
+
+        /// <summary>
+        /// Writes lines of text into the output buffer at a specified coordinates.
+        /// </summary>
+        /// <param name="orgin"></param>
+        /// <param name="content"></param>
         public void WriteOutput(Coordinates orgin, string[] content)
         {
             int lineId = 0;
@@ -117,21 +188,35 @@ namespace dotCmd
             //Get len of X coordinate, the plan here is to partition by Y
             var sizeOfX = cellBuffer.GetLength(1) * 4;
 
+            //partition by Y coordinate.
             int partitionY = (int)Math.Ceiling((decimal)(maxBufferSize / sizeOfX));
 
             var sizeOfY = cellBuffer.GetLength(0);
 
+            //if Y is smaller then the partition by Y then we need 
+            //to set the partiton size to Y size.
             if(sizeOfY < partitionY)
             {
                 partitionY = sizeOfY;
             }
 
+            //Get partitoned buffer size.
             int charBufferSize = (int)(partitionY * cellBuffer.GetLength(1));
 
             int cursor = 0;
-
-            for (int i = partitionY; i <= sizeOfY; i += partitionY)
+            int i = 0; 
+            do
             {
+                i += partitionY;
+
+                //If we exceeded the maximum size of the buffer we need to substract to the size of the remaining buffer.
+                if(i > sizeOfY)
+                {
+                    int diff = i - sizeOfY;
+                    i = i - diff;
+                }
+
+                //Fill the buffer part.
                 ConsoleHostNativeMethods.CHAR_INFO[] buffer = new ConsoleHostNativeMethods.CHAR_INFO[charBufferSize];
                 int idx = 0;
                 for (int y = cursor; y < i; y++)
@@ -159,9 +244,10 @@ namespace dotCmd
                 writeRegion.Bottom = (short)(orgin.Y + cursor + bufferSize.Y - 1);
 
                 DotConsoleNative.WriteConsoleOutput(handle, buffer, bufferSize, bufferCoord, ref writeRegion);
-
-                cursor += i;
-            }
+         
+                cursor = i;
+            } 
+            while (i < sizeOfY);
         }
 
         public OutputCell[,] ReadOutput(Region region)
@@ -171,10 +257,13 @@ namespace dotCmd
             //Get len of X coordinate, the plan here is to partition by Y
             var sizeOfX = (region.Width - region.Left + 1) * 4;
 
-            var partitionY = Math.Ceiling((decimal)(maxBufferSize / sizeOfX));
+            //partition by Y coordinate.
+            var partitionY = (int)Math.Ceiling((decimal)(maxBufferSize / sizeOfX));
 
             int sizeOfY = (region.Height - region.Top + 1);
 
+            //if Y is smaller then the partition by Y then we need 
+            //to set the partiton size to Y size.
             if (sizeOfY < partitionY)
             {
                 partitionY = sizeOfY;
@@ -190,17 +279,23 @@ namespace dotCmd
             OutputCell[,] cells = new OutputCell[sizeOfY, bufferSize.X];
 
             int cursor = 0;
-            for (int i = (int)partitionY; i <= sizeOfY; i += (int)partitionY)
+            int i = 0;
+            do
             {
+                i += partitionY;
+
+                //the size of the Y coordinate is always the size of the buffer.
                 bufferSize.X = (short)(region.Width - region.Left + 1);
                 bufferSize.Y = (short)partitionY;
 
-                var sub = i - sizeOfY;
-                if (sub >= 0)
+                //If we exceeded the maximum size of the buffer we need to substract to the size of the remaining buffer.
+                if (i > sizeOfY)
                 {
-                    bufferSize.Y = (short)(partitionY - sub);
+                    int diff = i - sizeOfY;
+                    bufferSize.Y = (short)(partitionY - diff);
                 }
 
+                //Fill the buffer part.
                 ConsoleHostNativeMethods.SMALL_RECT readRegion = new ConsoleHostNativeMethods.SMALL_RECT();
 
                 readRegion.Left = (short)region.Left;
@@ -211,6 +306,7 @@ namespace dotCmd
                 ConsoleHostNativeMethods.CHAR_INFO[] buffer = new ConsoleHostNativeMethods.CHAR_INFO[bufferSize.X * bufferSize.Y];
                 buffer = DotConsoleNative.ReadConsoleOutput(handle, buffer, bufferSize, bufferCoord, ref readRegion);
 
+                //Fill the output buffer cells.
                 int idx = 0;
                 for (int k = cursor; k < bufferSize.Y; k++)
                 {
@@ -223,8 +319,22 @@ namespace dotCmd
                     cursor = k;
                 }
             }
+            while (i < sizeOfY);
 
             return cells;
+        }
+
+        /// <summary>
+        /// Calculates where to put the cursor, it picks the maximum buffer corrdintates for any ContentRegion.
+        /// </summary>
+        internal void CalculateCursorBetweenRegions()
+        {
+            //Pick the max buffer size and scroll to that spot, this is mainly done to reducre the flickering.
+            var maxY = regions.Max(x => x.CurrentBufferSize.Y + x.Orgin.Y);
+
+            maxY = Math.Max(main.CurrentBufferSize.Y + main.Orgin.Y, maxY);
+
+            SetCursorPosition(new Coordinates() { X = 0, Y = maxY - 1 });
         }
     }
 }

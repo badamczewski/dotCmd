@@ -106,6 +106,17 @@ namespace dotCmd.Native
             return info;
         }
 
+        internal static void SetConsoleCursorPosition(SafeFileHandle handle, dotCmd.Native.ConsoleHostNativeMethods.COORD cursorPosition)
+        {
+            bool result = ConsoleHostNativeMethods.SetConsoleCursorPosition(handle.DangerousGetHandle(), cursorPosition);
+
+            if (result == false)
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw CreateException("Cannot set the curor position", err);
+            }            
+        }
+
         public static uint ToNativeConsoleColor(ConsoleColor foreground, ConsoleColor background)
         {
             //Console coloros are controles using four bits so a combination of backgroud and foregroud color

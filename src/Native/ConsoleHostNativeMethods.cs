@@ -23,6 +23,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;

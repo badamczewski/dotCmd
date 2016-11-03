@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /*
 Copyright (c) 2011-2014 Contributors as noted in the AUTHORS file
 This file is part of dotCmd.
@@ -32,5 +32,11 @@ namespace dotCmd
     {
         public int X { get; set; }
         public int Y { get; set; }
+
+        public Coordinates(int x, int y) : this()
+        {
+            this.X = x;
+            this.Y = y;
+        }
     }
 }
