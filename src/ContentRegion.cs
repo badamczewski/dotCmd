@@ -93,6 +93,7 @@ namespace dotCmd
             {
                 FillBuffer(text,  CurrentBufferSize.Y);
                 CurrentBufferSize.Y++;
+                CurrentBufferSize.X = text.Length;
             }
             else
             {
@@ -102,6 +103,8 @@ namespace dotCmd
 
                 this.contentBuffer = @new;
                 FillBuffer(text,  CurrentBufferSize.Y - 1);
+                CurrentBufferSize.X = text.Length;
+
             }
 
             //If we're using dotConsole with regions then we don't render

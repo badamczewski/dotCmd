@@ -330,11 +330,32 @@ namespace dotCmd
         internal void CalculateCursorBetweenRegions()
         {
             //Pick the max buffer size and scroll to that spot, this is mainly done to reducre the flickering.
-            var maxY = regions.Max(x => x.CurrentBufferSize.Y + x.Orgin.Y);
+            var maxY = -1;
+            var maxX = -1;
+            ContentRegion maxYRegion = null;
+            int current = maxY;
 
-            maxY = Math.Max(main.CurrentBufferSize.Y + main.Orgin.Y, maxY);
+            foreach (var region in regions)
+            {
+                current = region.CurrentBufferSize.Y + region.Orgin.Y;
+                if (current > maxY)
+                {
+                    maxY = current;
+                    maxYRegion = region;
+                }
+            }
 
-            SetCursorPosition(new Coordinates() { X = 0, Y = maxY - 1 });
+            current = main.CurrentBufferSize.Y + main.Orgin.Y;
+            if (current > maxY)
+            {
+                maxYRegion = main;
+                maxY = current;
+            }
+
+            //Once we have the region with the biggest value of Y we use it's X coordinate.
+            maxX = maxYRegion.CurrentBufferSize.X + maxYRegion.Orgin.X;
+
+            SetCursorPosition(new Coordinates() { X = maxX - 1, Y = maxY - 1 });
         }
     }
 }
