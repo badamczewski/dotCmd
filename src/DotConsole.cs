@@ -150,7 +150,7 @@ namespace dotCmd
             CalculateCursorBetweenRegions();
         }
 
-        public void Render()
+        public void Refresh()
         {
             PreRender();
             PostRender();
