@@ -120,24 +120,40 @@ namespace dotCmd
         /// <param name="text"></param>
         public void WriteLine(string text)
         {
-            //TODO we need to switch to double buffering using SetConsoleActiveScreenBuffer.
-            //Hide contents and show oryginal contents under the region.
-            foreach (var region in regions)
-                region.Restore();
+            PreRender();
 
             //Write to main region.
             main.WriteLine(text);
 
+            PostRender();   
+        }
+
+        private void PreRender()
+        {
+            //TODO we need to switch to double buffering using SetConsoleActiveScreenBuffer.
+            //Hide contents and show oryginal contents under the region.
+            foreach (var region in regions)
+                region.Restore();
+        }
+
+        private void PostRender()
+        {
             //Show content regions.
             foreach (var region in regions)
                 region.Render();
 
             main.Render();
-           
+
             //Calculate curtor position.
             //We only call this function a single time since moving the cursor between regions
             //introduces lots of flicker.
             CalculateCursorBetweenRegions();
+        }
+
+        public void Render()
+        {
+            PreRender();
+            PostRender();
         }
 
         /// <summary>
