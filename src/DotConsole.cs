@@ -39,7 +39,7 @@ namespace dotCmd
         /// <summary>
         /// Maximum buffer size that the NativeConsoleHost can handle.
         /// </summary>
-        private const int maxBufferSize = 64000 / 4; //the struct is 4 bytes in size
+        private const int maxBufferSize = 16384 / 4; //64K / 4 since the struct is 4 bytes in size
         //Create a single output buffer.
         private Lazy<SafeFileHandle> outputBuffer = new Lazy<SafeFileHandle>(DotConsoleNative.CreateOutputBuffer);
 
@@ -61,7 +61,9 @@ namespace dotCmd
             //Create the main content region.
             //This might not be the efficient way since content regions are extremly expensive so this may change.
             var size = this.GetOutputBufferWindowSize();
-            main = new ContentRegion(this, size, new Coordinates() { X = 0, Y = 0 }, ContentRegion.ContentPosition.Bottom, true);
+            main = new ContentRegion(this, size);
+
+            Console.CursorVisible = true;
         }
 
         /// <summary>
@@ -108,7 +110,7 @@ namespace dotCmd
         /// <param name="region"></param>
         public void RegisterRegion(ContentRegion region)
         {
-            region.hasOwner = true;
+            region.RegisterOwner(main);
             this.regions.Add(region);
         }
 
@@ -121,16 +123,17 @@ namespace dotCmd
             //TODO we need to switch to double buffering using SetConsoleActiveScreenBuffer.
             //Hide contents and show oryginal contents under the region.
             foreach (var region in regions)
-                region.Hide();
+                region.Restore();
 
             //Write to main region.
             main.WriteLine(text);
-            main.Render();
 
             //Show content regions.
             foreach (var region in regions)
                 region.Render();
 
+            main.Render();
+           
             //Calculate curtor position.
             //We only call this function a single time since moving the cursor between regions
             //introduces lots of flicker.
@@ -353,7 +356,7 @@ namespace dotCmd
             }
 
             //Once we have the region with the biggest value of Y we use it's X coordinate.
-            maxX = maxYRegion.CurrentBufferSize.X + maxYRegion.Orgin.X;
+            maxX = Math.Min(maxYRegion.CurrentBufferSize.X + maxYRegion.Orgin.X, maxYRegion.BufferSize.X);
 
             SetCursorPosition(new Coordinates() { X = maxX - 1, Y = maxY - 1 });
         }

@@ -44,15 +44,30 @@ namespace dotCmd
         private OutputCell[,] savedContentBuffer = null;
         private OutputCell[,] contentBuffer = null;
         private Coordinates savedCoordsWithOffset;
+
         private DotConsole console;
         private ContentPosition position;
+        private ContentRegion theOneToRuleThemAll;
 
-        public bool scroll = false;
-        internal bool hasOwner = false;
+        private bool scroll = false;
 
+        //Structs are hepas of fun but they make the worst properties so we just expose them as fields.
         public Coordinates BufferSize; 
         public Coordinates CurrentBufferSize; 
-        public Coordinates Orgin; 
+        public Coordinates Orgin;
+       
+        //This constructor is used by Dotconsole to register the main buffer within it.
+        internal ContentRegion(DotConsole console, Coordinates bufferSize) 
+        {
+            this.console = console;
+            this.BufferSize = bufferSize;
+            this.Orgin = new Coordinates(0, 0);
+            this.position = ContentPosition.Bottom;
+
+            this.contentBuffer = new OutputCell[bufferSize.Y, bufferSize.X];
+
+            this.scroll = true;
+        }
 
         public ContentRegion(DotConsole console, Coordinates bufferSize, Coordinates orgin, ContentPosition position, bool scroll)
         {
@@ -64,6 +79,13 @@ namespace dotCmd
             this.contentBuffer = new OutputCell[bufferSize.Y, bufferSize.X];
 
             this.scroll = scroll;
+
+            this.console.RegisterRegion(this);
+        }
+
+        public void RegisterOwner(ContentRegion theOneToRuleThemAll)
+        {
+            this.theOneToRuleThemAll = theOneToRuleThemAll;
         }
 
         private void FillBuffer(string text, int row)
@@ -106,14 +128,6 @@ namespace dotCmd
                 CurrentBufferSize.X = text.Length;
 
             }
-
-            //If we're using dotConsole with regions then we don't render
-            //content here and let the dotConsole handle it.
-            if (hasOwner == true)
-            {
-                Render();
-                console.CalculateCursorBetweenRegions();
-            }
         }
 
         /// <summary>
@@ -144,23 +158,57 @@ namespace dotCmd
                     top = window.Height - Orgin.Y - (contentBuffer.GetLength(0));
             }
 
-            //Save the oryginal content under this buffer.
-            savedContentBuffer = console.ReadOutput(new Region() { Left = left, Top = top, Height = height, Width = width });
-
             if (scroll == true)
+            {
                 top = Orgin.Y;
+            }
+            //Scrollable content regions will not move with the window so theres no point to save state.
+            else
+            {
+                savedContentBuffer = null;
+                savedContentBuffer = console.ReadOutput(new Region() { Left = left, Top = top, Height = height, Width = width });
+            }
 
-            savedCoordsWithOffset = new Coordinates() { X = left, Y = top };
-            console.WriteOutput(savedCoordsWithOffset, this.contentBuffer);
+            savedCoordsWithOffset.X = left;
+            savedCoordsWithOffset.Y = top;
+
+            if (theOneToRuleThemAll != null)
+            {
+                RenderToContentRegion(this.contentBuffer);
+            }
+            else
+            {
+                console.WriteOutput(savedCoordsWithOffset, this.contentBuffer);
+            }
+        }
+
+        private void RenderToContentRegion(OutputCell[,] source)
+        {
+            for (int y = 0; y < this.BufferSize.Y; y++)
+            {
+                for (int x = 0; x < this.BufferSize.X; x++)
+                {
+                    theOneToRuleThemAll.contentBuffer[savedCoordsWithOffset.Y + y, savedCoordsWithOffset.X + x] = source[y, x];
+                }
+            }
         }
 
         /// <summary>
         ///Hides the contents of this buffer and shows orginal contents under the region.
         /// </summary>
-        public void Hide()
+        public void Restore()
         {
             if (savedContentBuffer != null)
-                console.WriteOutput(savedCoordsWithOffset, savedContentBuffer);
+            {
+                if (theOneToRuleThemAll != null)
+                {
+                    RenderToContentRegion(savedContentBuffer);
+                }
+                else
+                {
+                    console.WriteOutput(savedCoordsWithOffset, savedContentBuffer);
+                }
+            }
         }
     }
 }

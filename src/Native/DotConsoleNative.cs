@@ -52,6 +52,7 @@ namespace dotCmd.Native
                 throw CreateException("Cannot get the output buffer", err);
 
             }
+
             return handle;
         }
 
@@ -132,7 +133,5 @@ namespace dotCmd.Native
             var win32Ex = new Win32Exception(err);
             return new Exception(friendlyMessage, win32Ex);
         }
-
-
     }
 }
