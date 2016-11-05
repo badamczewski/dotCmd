@@ -63,16 +63,29 @@ namespace dotCmd
             var size = this.GetOutputBufferWindowSize();
             main = new ContentRegion(this, size);
 
+            Console.BackgroundColor = main.BackgroundColor;
+            Console.ForegroundColor = main.ForegroundColor;
             Console.CursorVisible = true;
         }
 
-        /// <summary>
-        /// Creates the output buffer.
-        /// </summary>
-        /// <returns></returns>
-        private SafeFileHandle GetOutputBuffer()
+        public ConsoleColor BackgroundColor
         {
-            return outputBuffer.Value;
+            get { return main.BackgroundColor; }
+            set 
+            { 
+                main.BackgroundColor = value;
+                Console.BackgroundColor = value;
+            }
+        }
+
+        public ConsoleColor ForegroundColor
+        {
+            get { return main.ForegroundColor; }
+            set
+            {
+                main.ForegroundColor = value;
+                Console.ForegroundColor = value;
+            }
         }
 
         /// <summary>
@@ -126,28 +139,6 @@ namespace dotCmd
             main.WriteLine(text);
 
             PostRender();   
-        }
-
-        private void PreRender()
-        {
-            //TODO we need to switch to double buffering using SetConsoleActiveScreenBuffer.
-            //Hide contents and show oryginal contents under the region.
-            foreach (var region in regions)
-                region.Restore();
-        }
-
-        private void PostRender()
-        {
-            //Show content regions.
-            foreach (var region in regions)
-                region.Render();
-
-            main.Render();
-
-            //Calculate curtor position.
-            //We only call this function a single time since moving the cursor between regions
-            //introduces lots of flicker.
-            CalculateCursorBetweenRegions();
         }
 
         public void Refresh()
@@ -242,8 +233,17 @@ namespace dotCmd
                 {
                     for (int x = 0; x < cellBuffer.GetLength(1); x++)
                     {
-                        buffer[idx].Attributes = cellBuffer[y, x].Attributes;
-                        buffer[idx].UnicodeChar = cellBuffer[y, x].Char;
+                        var cellToWrite = cellBuffer[y, x];
+
+                        if (cellToWrite.Attributes == 0)
+                        {
+                            //Don't set the background color for empty cells this will force the ConsoleHost
+                            //to do a very expensive calculation for each cell and slow things down.
+                            cellToWrite.Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(0, ConsoleColor.Blue);
+                        }
+
+                        buffer[idx].Attributes = cellToWrite.Attributes;
+                        buffer[idx].UnicodeChar = cellToWrite.Char;
                         idx++;
                     }
                 }
@@ -342,6 +342,38 @@ namespace dotCmd
 
             return cells;
         }
+
+        private void PreRender()
+        {
+            //TODO we need to switch to double buffering using SetConsoleActiveScreenBuffer.
+            //Hide contents and show oryginal contents under the region.
+            foreach (var region in regions)
+                region.Restore();
+        }
+
+        private void PostRender()
+        {
+            //Show content regions.
+            foreach (var region in regions)
+                region.Render();
+
+            main.Render();
+
+            //Calculate curtor position.
+            //We only call this function a single time since moving the cursor between regions
+            //introduces lots of flicker.
+            CalculateCursorBetweenRegions();
+        }
+
+        /// <summary>
+        /// Creates the output buffer.
+        /// </summary>
+        /// <returns></returns>
+        private SafeFileHandle GetOutputBuffer()
+        {
+            return outputBuffer.Value;
+        }
+
 
         /// <summary>
         /// Calculates where to put the cursor, it picks the maximum buffer corrdintates for any ContentRegion.

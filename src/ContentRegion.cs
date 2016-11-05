@@ -51,6 +51,7 @@ namespace dotCmd
 
         private bool scroll = false;
 
+
         //Structs are hepas of fun but they make the worst properties so we just expose them as fields.
         public Coordinates BufferSize; 
         public Coordinates CurrentBufferSize; 
@@ -67,9 +68,15 @@ namespace dotCmd
             this.contentBuffer = new OutputCell[bufferSize.Y, bufferSize.X];
 
             this.scroll = true;
+
+            this.BackgroundColor = ConsoleColor.Blue;
+            this.ForegroundColor = ConsoleColor.White;
         }
 
-        public ContentRegion(DotConsole console, Coordinates bufferSize, Coordinates orgin, ContentPosition position, bool scroll)
+        public ContentRegion(DotConsole console, 
+            Coordinates bufferSize, Coordinates orgin, ContentPosition position, bool scroll = false, 
+            ConsoleColor backgroundColor = ConsoleColor.Blue,
+            ConsoleColor foregroundColor = ConsoleColor.White)
         {
             this.console = console;
             this.BufferSize = bufferSize;
@@ -79,6 +86,10 @@ namespace dotCmd
             this.contentBuffer = new OutputCell[bufferSize.Y, bufferSize.X];
 
             this.scroll = scroll;
+
+
+            this.BackgroundColor = backgroundColor;
+            this.ForegroundColor = foregroundColor;
 
             this.console.RegisterRegion(this);
         }
@@ -97,7 +108,7 @@ namespace dotCmd
                     break;
 
                 this.contentBuffer[row, idx].Char = (ushort)c;
-                this.contentBuffer[row, idx].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(Console.ForegroundColor, ConsoleColor.Blue);
+                this.contentBuffer[row, idx].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(this.ForegroundColor, this.BackgroundColor);
 
                 idx++;
             }
