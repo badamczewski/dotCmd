@@ -183,7 +183,7 @@ namespace dotCmd
                 foreach (var c in line)
                 {
                     buffer[lineId, charId].Char = (ushort)c;
-                    buffer[lineId, charId].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(Console.ForegroundColor, Console.BackgroundColor);
+                    buffer[lineId, charId].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(ForegroundColor, BackgroundColor);
                     charId++;
                 }
             }
@@ -237,9 +237,9 @@ namespace dotCmd
 
                         if (cellToWrite.Attributes == 0)
                         {
-                            //Don't set the background color for empty cells this will force the ConsoleHost
+                            //Don't set the foreground color for empty cells this will force the ConsoleHost
                             //to do a very expensive calculation for each cell and slow things down.
-                            cellToWrite.Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(0, ConsoleColor.Blue);
+                            cellToWrite.Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(0, BackgroundColor);
                         }
 
                         buffer[idx].Attributes = cellToWrite.Attributes;
@@ -406,7 +406,7 @@ namespace dotCmd
             //Once we have the region with the biggest value of Y we use it's X coordinate.
             maxX = Math.Min(maxYRegion.CurrentBufferSize.X + maxYRegion.Orgin.X, maxYRegion.BufferSize.X);
 
-            SetCursorPosition(new Coordinates() { X = maxX - 1, Y = maxY - 1 });
+            SetCursorPosition(new Coordinates() { X = Math.Max(maxX - 1, 0), Y = Math.Max(maxY - 1, 0) });
         }
     }
 }

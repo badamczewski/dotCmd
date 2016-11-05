@@ -71,13 +71,13 @@ namespace dotCmd
 
             this.scroll = true;
 
-            this.BackgroundColor = ConsoleColor.Blue;
+            this.BackgroundColor = ConsoleColor.Black;
             this.ForegroundColor = ConsoleColor.White;
         }
 
         public ContentRegion(DotConsole console, 
             Coordinates bufferSize, Coordinates orgin, ContentPosition position, bool scroll = false, 
-            ConsoleColor backgroundColor = ConsoleColor.Blue,
+            ConsoleColor backgroundColor = ConsoleColor.Black,
             ConsoleColor foregroundColor = ConsoleColor.White)
         {
             this.console = console;
@@ -134,6 +134,7 @@ namespace dotCmd
             {
                 //Right shift the buffer.
                 var @new = new OutputCell[BufferSize.Y, BufferSize.X];
+                
                 Array.Copy(contentBuffer, BufferSize.X, @new, 0, this.contentBuffer.Length - BufferSize.X);
 
                 this.contentBuffer = @new;
@@ -168,7 +169,7 @@ namespace dotCmd
                 int sizeOfY = contentBuffer.GetLength(0);
 
                 if (sizeOfY < window.Height)
-                    top = window.Height - Orgin.Y - (contentBuffer.GetLength(0));
+                    top = window.Height - Orgin.Y - (contentBuffer.GetLength(0) - 1);
             }
 
             if (scroll == true)
