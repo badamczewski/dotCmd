@@ -51,6 +51,8 @@ namespace dotCmd
 
         private bool scroll = false;
 
+        public ConsoleColor BackgroundColor { get; set; }
+        public ConsoleColor ForegroundColor { get; set; }
 
         //Structs are hepas of fun but they make the worst properties so we just expose them as fields.
         public Coordinates BufferSize; 
