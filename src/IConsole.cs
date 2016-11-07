@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /*
 Copyright (c) 2011-2014 Contributors as noted in the AUTHORS file
 This file is part of dotCmd.
@@ -26,17 +26,24 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace dotCmd.Native
+namespace dotCmd
 {
     /// <summary>
-    /// Defines DLL Import names for different native functions.
-    /// This is usefull when we would want to port this project to .NET Core or Unix.
+    /// Describes the possible operations that the user can do using the Console.
     /// </summary>
-    public static class DllImportNames
+    public interface IConsole
     {
         /// <summary>
-        /// 
+        /// Writes a line of text into the output buffer.
         /// </summary>
-        internal const string Kernel = "kernel32.dll";
+        /// <param name="text"></param>
+        int WriteLine(string text);
+
+        /// <summary>
+        /// Updates a line of text using the relative line index of the output buffer.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="relativeLineId"></param>
+        int UpdateLine(string text, int relativeLineId);
     }
 }

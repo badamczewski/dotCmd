@@ -31,6 +31,10 @@ using System.Threading.Tasks;
 
 namespace dotCmd.Native
 {
+    /// <summary>
+    /// Wraps Native Console calls to provide additional facilities like logging
+    /// and error handling.
+    /// </summary>
     internal static class DotConsoleNative
     {
         internal static SafeFileHandle CreateOutputBuffer()
