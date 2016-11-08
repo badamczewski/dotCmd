@@ -20,6 +20,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #endregion
+using dotCmd.DataStructures;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
@@ -75,6 +76,17 @@ namespace dotCmd.Native
             out CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo);
 
         [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool GetConsoleScreenBufferInfoEx(
+            IntPtr consoleOutput,
+            ref CONSOLE_SCREEN_BUFFER_INFO_EX ConsoleScreenBufferInfo);
+
+        [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool SetConsoleScreenBufferInfoEx(
+            IntPtr consoleOutput,
+            ref CONSOLE_SCREEN_BUFFER_INFO_EX consoleScreenBufferInfo
+        );
+
+        [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool ReadConsoleOutput
         (
             IntPtr consoleOutput,
@@ -113,21 +125,55 @@ namespace dotCmd.Native
         }
 
         [StructLayout(LayoutKind.Sequential)]
+        internal struct CONSOLE_SCREEN_BUFFER_INFO_EX
+        {
+            public int cbSize;
+            public COORD size;
+            public COORD cursorPosition;
+            public ushort attributes;
+            public SMALL_RECT window;
+            public COORD maximumWindowSize;
+            public ushort popupAttributes;
+            public bool fullscreenSupported;
+
+            public COLORREF black;            
+            public COLORREF darkBlue;
+            public COLORREF darkGreen;
+            public COLORREF darkCyan;
+            public COLORREF darkRed;
+            public COLORREF darkMagenta;
+            public COLORREF darkYellow;
+            public COLORREF gray;
+            public COLORREF darkGray;
+            public COLORREF blue;
+            public COLORREF green;
+            public COLORREF cyan;
+            public COLORREF red;
+            public COLORREF magenta;
+            public COLORREF yellow;
+            public COLORREF white;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct COLORREF
+        {
+            public uint Color;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
         internal struct CHAR_INFO
         {
-            internal ushort UnicodeChar;
-            internal UInt16 Attributes;
+            public ushort UnicodeChar;
+            public UInt16 Attributes;
         }
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct SMALL_RECT
         {
-
             public short Left;
             public short Top;
             public short Right;
             public short Bottom;
-
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -159,6 +205,5 @@ namespace dotCmd.Native
             OpenAlways = 4,
             TruncateExisting = 5
         }
-
     }
 }

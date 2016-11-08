@@ -20,6 +20,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #endregion
+using dotCmd.DataStructures;
 using dotCmd.Native;
 using Microsoft.Win32.SafeHandles;
 using System;
@@ -43,18 +44,23 @@ namespace dotCmd.Rendering
         //Create a single output buffer.
         private Lazy<SafeFileHandle> outputBuffer = new Lazy<SafeFileHandle>(DotConsoleNative.CreateOutputBuffer);
 
-        public DotConsoleRenderer() { }
+        private ColorMap colorMap = null;
 
-        public ConsoleColor BackgroundColor
-        {
-            get;
-            set;
+        public DotConsoleRenderer() {
+
+            var buffer = GetOutputBuffer();
+            colorMap = new ColorMap(buffer);
         }
 
-        public ConsoleColor ForegroundColor
+        public ConsoleColor BackgroundColor { get; set; }
+        public ConsoleColor ForegroundColor { get; set; }
+
+        /// <summary>
+        /// Get the color map that controls how colors are maped in the console host.
+        /// </summary>
+        public ColorMap ColorMap
         {
-            get;
-            set;
+            get { return colorMap; }
         }
 
         /// <summary>
@@ -261,9 +267,9 @@ namespace dotCmd.Rendering
                 ConsoleHostNativeMethods.SMALL_RECT readRegion = new ConsoleHostNativeMethods.SMALL_RECT();
 
                 readRegion.Left = (short)region.Left;
-                readRegion.Top = (short)bufferCoord.Y;
+                readRegion.Top = (short)region.Top;
                 readRegion.Right = (short)(region.Left + bufferSize.X - 1);
-                readRegion.Bottom = (short)(bufferCoord.Y + bufferSize.Y - 1);
+                readRegion.Bottom = (short)(region.Top + bufferSize.Y - 1);
 
                 ConsoleHostNativeMethods.CHAR_INFO[] buffer = new ConsoleHostNativeMethods.CHAR_INFO[bufferSize.X * bufferSize.Y];
                 buffer = DotConsoleNative.ReadConsoleOutput(handle, buffer, bufferSize, bufferCoord, ref readRegion);
@@ -294,5 +300,7 @@ namespace dotCmd.Rendering
         {
             return outputBuffer.Value;
         }
+
+
     }
 }

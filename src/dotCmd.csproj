@@ -45,10 +45,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataStructures\Color.cs" />
     <Compile Include="DotConsoleRegion.cs" />
     <Compile Include="DataStructures\Coordinates.cs" />
     <Compile Include="DotConsole.cs" />
     <Compile Include="IConsole.cs" />
+    <Compile Include="Rendering\ColorMap.cs" />
     <Compile Include="Rendering\DotConsoleRenderer.cs" />
     <Compile Include="Rendering\IConsoleRenderer.cs" />
     <Compile Include="Native\BreakHandler.cs" />

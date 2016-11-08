@@ -54,7 +54,6 @@ namespace dotCmd.Native
             {
                 int err = Marshal.GetLastWin32Error();
                 throw CreateException("Cannot get the output buffer", err);
-
             }
 
             return handle;
@@ -107,6 +106,39 @@ namespace dotCmd.Native
                 int err = Marshal.GetLastWin32Error();
                 throw CreateException("Cannot get output buffer info", err);
             }            
+
+            return info;
+        }
+
+        internal static dotCmd.Native.ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO_EX GetConsoleScreenBufferInfoExtended(
+            SafeFileHandle handle)
+        {
+            ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO_EX info = new ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO_EX();
+            var size = Marshal.SizeOf(info);
+
+            info.cbSize = size;
+            bool result = ConsoleHostNativeMethods.GetConsoleScreenBufferInfoEx(handle.DangerousGetHandle(), ref info);
+
+            if (result == false)
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw CreateException("Cannot get output buffer info", err);
+            }
+
+            return info;
+        }
+
+        internal static dotCmd.Native.ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO_EX SetConsoleScreenBufferInfoExtended(
+            SafeFileHandle handle,
+            ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO_EX info)
+        {
+            bool result = ConsoleHostNativeMethods.SetConsoleScreenBufferInfoEx(handle.DangerousGetHandle(), ref info); 
+
+            if (result == false)
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw CreateException("Cannot set output buffer info", err);
+            }
 
             return info;
         }

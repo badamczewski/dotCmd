@@ -20,6 +20,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #endregion
+using dotCmd.DataStructures;
 using dotCmd.Native;
 using dotCmd.Rendering;
 using System;
@@ -84,8 +85,8 @@ namespace dotCmd
  
         private bool scroll = false;
 
-        public ConsoleColor BackgroundColor { get; set; }
-        public ConsoleColor ForegroundColor { get; set; }
+        public Color BackgroundColor { get; set; }
+        public Color ForegroundColor { get; set; }
 
         //Structs are hepas of fun but they make the worst properties so we just expose them as fields.
         public Coordinates BufferSize; 
@@ -105,16 +106,16 @@ namespace dotCmd
 
             this.scroll = true;
 
-            this.BackgroundColor = ConsoleColor.Black;
-            this.ForegroundColor = ConsoleColor.White;
+            this.BackgroundColor = new Color(0, 0, 80); 
+            this.ForegroundColor = new Color(255, 255, 255);
         }
 
         public DotConsoleRegion(IConsoleRenderer console, 
             DotConsoleRegion parent,
             Coordinates bufferSize, Coordinates orgin, ContentPosition position, 
-            bool scroll = false, 
-            ConsoleColor backgroundColor = ConsoleColor.Black,
-            ConsoleColor foregroundColor = ConsoleColor.White)
+            bool scroll = false,
+            Color backgroundColor = default(Color),
+            Color foregroundColor = default(Color))
         {
             this.consoleRenderer = console;
             this.BufferSize = bufferSize;
@@ -127,6 +128,9 @@ namespace dotCmd
 
             this.BackgroundColor = backgroundColor;
             this.ForegroundColor = foregroundColor;
+
+            if (foregroundColor.Equals(default(Color)))
+                this.ForegroundColor = new Color(255, 255, 255);
 
             this.parent = parent;
             this.parent.RegisterRegion(this);
@@ -148,10 +152,23 @@ namespace dotCmd
             //Hide contents and show oryginal contents under the region.
             foreach (var region in regions)
                 region.Restore(this);
+
+            this.Restore(parent);
         }
 
         private void PostRender()
         {
+            //Only root node should set the cursor.
+            //Since all buffers have known positions we can pre set cursor position
+            //and then render contents.
+            if (parent == null)
+            {
+                //Calculate curtor position.
+                //We only call this function a single time since moving the cursor between regions
+                //introduces lots of flicker.
+                CalculateCursorBetweenRegions();
+            }
+
             var wnd = consoleRenderer.GetOutputBufferWindow();
 
             //Show content regions.
@@ -159,13 +176,6 @@ namespace dotCmd
                 region.Render(wnd, this);
 
             this.Render(wnd, parent);
-
-            //Only root node should set the cursor.
-            if (parent == null)
-                //Calculate curtor position.
-                //We only call this function a single time since moving the cursor between regions
-                //introduces lots of flicker.
-                CalculateCursorBetweenRegions();
         }
 
         /// <summary>
@@ -211,6 +221,26 @@ namespace dotCmd
             PreRender();
 
             var lineId = WriteLineToBuffer(text);
+
+            PostRender();
+
+            return lineId;
+        }
+
+        /// <summary>
+        /// Writes a line of text into the output buffer.
+        /// </summary>
+        /// <param name="text"></param>
+        public int WriteLine(string text, Color color)
+        {
+            PreRender();
+
+            var backup = this.ForegroundColor;
+            this.ForegroundColor = color;
+
+            var lineId = WriteLineToBuffer(text);
+
+            this.ForegroundColor = backup;
 
             PostRender();
 
@@ -315,7 +345,14 @@ namespace dotCmd
             else
             {
                 savedContentBuffer = null;
-                savedContentBuffer = consoleRenderer.ReadOutput(new Region() { Left = left, Top = top, Height = height, Width = width });
+                if (owner != null)
+                {
+                    savedContentBuffer = RestoreToContentRegion(owner, new Region() { Left = left, Top = top, Height = height, Width = width });
+                }
+                else
+                {
+                    savedContentBuffer = consoleRenderer.ReadOutput(new Region() { Left = left, Top = top, Height = height, Width = width });
+                }
             }
 
             savedCoordsWithOffset.X = left;
@@ -326,8 +363,7 @@ namespace dotCmd
                 RenderToContentRegion(owner, this.contentBuffer);
             }
             else
-            {
-                
+            {             
                 consoleRenderer.WriteOutput(savedCoordsWithOffset, this.contentBuffer);
             }
         }
@@ -358,6 +394,26 @@ namespace dotCmd
             }
         }
 
+        private OutputCell[,] RestoreToContentRegion(DotConsoleRegion owner, Region region)
+        {
+            OutputCell[,] result = new OutputCell[this.BufferSize.Y, this.BufferSize.X];
+
+            int resultY = 0;
+            int resultX = 0;
+            for (int y = region.Top; y <= region.Top + (region.Top - region.Height); y++)
+            {
+                for (int x = region.Left; x <= region.Left + (region.Left - region.Width); x++)
+                {
+                    result[resultY, resultX] = owner.contentBuffer[y, x];
+                    resultX++;
+                }
+
+                resultY++;
+            }
+
+            return result;
+        }
+
         private void RenderToContentRegion(DotConsoleRegion owner, OutputCell[,] source)
         {
             for (int y = 0; y < this.BufferSize.Y; y++)
@@ -371,6 +427,24 @@ namespace dotCmd
 
         private void FillBuffer(string text, int row)
         {
+            //TODO Move this code out of here to ColorMap.
+            ConsoleColor fc = ConsoleColor.White;
+            ConsoleColor bc = ConsoleColor.Black;
+            bool fcInMap = consoleRenderer.ColorMap.TryGetMappedColor(this.ForegroundColor, out fc);
+            bool bcInMap = consoleRenderer.ColorMap.TryGetMappedColor(this.BackgroundColor, out bc);
+
+            if (fcInMap == false) //add this color to map.
+            {
+                consoleRenderer.ColorMap.AddColor(this.ForegroundColor);
+                consoleRenderer.ColorMap.TryGetMappedColor(this.ForegroundColor, out fc);
+            }
+
+            if(bcInMap == false)
+            {
+                consoleRenderer.ColorMap.AddColor(this.BackgroundColor);
+                consoleRenderer.ColorMap.TryGetMappedColor(this.BackgroundColor, out bc);
+            }
+
             int idx = 0;
             foreach (var c in text)
             {
@@ -378,7 +452,7 @@ namespace dotCmd
                     break;
 
                 this.contentBuffer[row, idx].Char = (ushort)c;
-                this.contentBuffer[row, idx].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(this.ForegroundColor, this.BackgroundColor);
+                this.contentBuffer[row, idx].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(fc, bc);
 
                 idx++;
             }

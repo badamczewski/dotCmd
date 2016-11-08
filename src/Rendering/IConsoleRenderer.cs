@@ -71,5 +71,7 @@ namespace dotCmd.Rendering
 
         ConsoleColor BackgroundColor { get; set; }
         ConsoleColor ForegroundColor { get; set; }
+
+        ColorMap ColorMap { get; }
     }
 }

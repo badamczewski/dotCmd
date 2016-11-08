@@ -20,6 +20,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #endregion
+using dotCmd.DataStructures;
 using dotCmd.Native;
 using dotCmd.Rendering;
 using Microsoft.Win32.SafeHandles;
@@ -39,7 +40,7 @@ namespace dotCmd
     {
         private List<DotConsoleRegion> regions = new List<DotConsoleRegion>();
         private DotConsoleRegion main = null;
-        private IConsoleRenderer renderer = null;
+        private DotConsoleRenderer renderer = null;
 
         public DotConsole()
         {
@@ -59,8 +60,9 @@ namespace dotCmd
             var size = renderer.GetOutputBufferWindowSize();
             main = new DotConsoleRegion(renderer, size);
 
-            Console.BackgroundColor = main.BackgroundColor;
-            Console.ForegroundColor = main.ForegroundColor;
+            this.BackgroundColor = main.BackgroundColor;
+            this.ForegroundColor = main.ForegroundColor;
+  
             Console.CursorVisible = true;
         }
 
@@ -83,7 +85,7 @@ namespace dotCmd
         /// <summary>
         /// Gets/Sets the Console Background Color.
         /// </summary>
-        public ConsoleColor BackgroundColor
+        public Color BackgroundColor
         {
             get { return main.BackgroundColor; }
             set { SetBackgroudColors(value); }
@@ -92,7 +94,7 @@ namespace dotCmd
         /// <summary>
         /// Gets/Sets the Console Foreground Color.
         /// </summary>
-        public ConsoleColor ForegroundColor
+        public Color ForegroundColor
         {
             get { return main.ForegroundColor; }
             set { SetForegroundColors(value); }
@@ -119,6 +121,16 @@ namespace dotCmd
         }
 
         /// <summary>
+        /// Writes a line of text into the output buffer.
+        /// </summary>
+        /// <param name="text"></param>
+        public int WriteLine(string text, Color color)
+        {
+            //Write to main region.
+            return main.WriteLine(text, color);
+        }
+
+        /// <summary>
         /// Updates a line of text using the relative line index of the output buffer.
         /// </summary>
         /// <param name="text"></param>
@@ -140,18 +152,30 @@ namespace dotCmd
             return main.UpdateLine(text, relativeLineId);
         }
 
-        private void SetForegroundColors(ConsoleColor value)
+        private void SetForegroundColors(Color value)
         {
             main.ForegroundColor = value;
-            Console.ForegroundColor = value;
-            renderer.ForegroundColor = value;
+            ConsoleColor consoleColor = ConsoleColor.White;
+            if (renderer.ColorMap.TryGetMappedColor(value, out consoleColor) == false)
+            {
+                renderer.ColorMap.ChangeColor(ConsoleColor.White, value);
+            }
+
+            Console.ForegroundColor = consoleColor;
+            renderer.ForegroundColor = consoleColor;
         }
 
-        private void SetBackgroudColors(ConsoleColor value)
+        private void SetBackgroudColors(Color value)
         {
             main.BackgroundColor = value;
-            Console.BackgroundColor = value;
-            renderer.BackgroundColor = value;
+            ConsoleColor consoleColor = ConsoleColor.Black;
+            if (renderer.ColorMap.TryGetMappedColor(value, out consoleColor) == false)
+            {
+                renderer.ColorMap.ChangeColor(ConsoleColor.Black, value);
+            }
+
+            Console.BackgroundColor = consoleColor;
+            renderer.BackgroundColor = consoleColor;
         }
     }
 }
