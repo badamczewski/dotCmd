@@ -15,10 +15,13 @@ region of the console. Using regions it's easy to create controls like display t
 
 ![dotcmd](https://cloud.githubusercontent.com/assets/752380/20029600/64f61518-a350-11e6-8b8f-bdedff711d92.gif)
 
+- [Full RGB Color handling] - dotConsole maps the standard console colors and creates full RGB color presets. These can be used only on a single region or the entire console buffer.
+
+![colors](https://cloud.githubusercontent.com/assets/752380/20129990/002c9830-a654-11e6-94cb-f4426a1ad7c7.gif)
+
 ## Roadmap
 
 - Tab completion and suggestion provider in input buffer.
 - Input buffer histories.
-- Better color handling (ditch the ConsoleColor class and use full RGB Colors)
 - Command Line Argument parser and Console Generator by example.
 - Composable API with much more Operations then a standard Console provides.
