@@ -9,9 +9,8 @@ dotCmd aims to give .NET developers a much more advanced console by using the Na
 
 ## Features
 
-- [Independent output buffers] - dotConsole is capable of handling multiple output buffers that can be accessed using Regions. 
-This enables users to create headers and footers that scroll with the main console output, as well as buffers that can scroll within the defined
-region of the console. Using regions it's easy to create controls like display tables or progress bars.
+- [Independent output buffers] - dotConsole is capable of handling multiple output buffers that can be accessed using Regions. This enables users to create headers and footers that scroll with the main console output, as well as buffers that can scroll within the defined region of the console. Using regions it's easy to create controls like display tables or progress bars.
+
 <p align="center">
   <img src="https://cloud.githubusercontent.com/assets/752380/20029600/64f61518-a350-11e6-8b8f-bdedff711d92.gif" align="center" width="512">
 </p>
