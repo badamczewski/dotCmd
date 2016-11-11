@@ -124,33 +124,48 @@ namespace dotCmd
         /// Writes a line of text into the output buffer.
         /// </summary>
         /// <param name="text"></param>
-        public int WriteLine(string text, Color color)
+        public int WriteLine(string text, Color backgroundColor, Color foregroundColor, bool fill)
         {
-            //Write to main region.
-            return main.WriteLine(text, color);
+            return main.WriteLine(text, backgroundColor, foregroundColor, fill);
         }
 
         /// <summary>
-        /// Updates a line of text using the relative line index of the output buffer.
+        /// Alters the existing line with new text.
         /// </summary>
         /// <param name="text"></param>
         /// <param name="relativeLineId"></param>
-        public int WriteLine(string text, int relativeLineId)
+        /// <returns></returns>
+        public int AlterLine(string text, int relativeLineId)
         {
-            //Write to main region.
-            return main.UpdateLine(text, relativeLineId);
+            return main.AlterLine(text, relativeLineId);
         }
 
         /// <summary>
-        /// Updates a line by clearing it and appending the text using the relative line index of the output buffer.
+        /// Alters the existing line with new text and depending on the [cleraFirst] param clears the whole line first.
         /// </summary>
         /// <param name="text"></param>
         /// <param name="relativeLineId"></param>
-        public int UpdateLine(string text, int relativeLineId)
+        /// <param name="clearFirst"></param>
+        /// <returns></returns>
+        public int AlterLine(string text, int relativeLineId, bool clearFirst)
         {
-            //Write to main region.
-            return main.UpdateLine(text, relativeLineId);
+            return main.AlterLine(text, relativeLineId, clearFirst);
         }
+
+        /// <summary>
+        /// Alters the existing line at the specified column (X) position with new text and color palete.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="relativeLineId"></param>
+        /// <param name="relativeColumnId"></param>
+        /// <param name="backgroundColor"></param>
+        /// <param name="foregroundColor"></param>
+        /// <returns></returns>
+        public int AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor)
+        {
+            return main.AlterLine(text, relativeLineId, relativeColumnId, columnLength, backgroundColor, foregroundColor);
+        }
+ 
 
         private void SetForegroundColors(Color value)
         {
@@ -177,5 +192,5 @@ namespace dotCmd
             Console.BackgroundColor = consoleColor;
             renderer.BackgroundColor = consoleColor;
         }
-    }
+   }
 }

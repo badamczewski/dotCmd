@@ -20,6 +20,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #endregion
+using dotCmd.DataStructures;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -60,14 +61,14 @@ namespace dotCmd.Rendering
         /// </summary>
         /// <param name="orgin"></param>
         /// <param name="content"></param>
-        void WriteOutput(Coordinates orgin, OutputCell[,] cellBuffer);
+        void WriteOutput(Coordinates orgin, CellBuffer cellBuffer);
 
         /// <summary>
         /// Reads cell matrix form the output buffer using the provided rectangle.
         /// </summary>
         /// <param name="region"></param>
         /// <returns></returns>
-        OutputCell[,] ReadOutput(Region region);
+        CellBuffer ReadOutput(Region region);
 
         ConsoleColor BackgroundColor { get; set; }
         ConsoleColor ForegroundColor { get; set; }

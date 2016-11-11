@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataStructures\CellBuffer.cs" />
     <Compile Include="DataStructures\Color.cs" />
     <Compile Include="DotConsoleRegion.cs" />
     <Compile Include="DataStructures\Coordinates.cs" />

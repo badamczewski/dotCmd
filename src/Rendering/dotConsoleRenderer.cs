@@ -119,15 +119,15 @@ namespace dotCmd.Rendering
             //Find the widest line and set the OutputCell matrix to such width
             var max = content.Max(x => x.Length);
 
-            OutputCell[,] buffer = new OutputCell[content.Length, max];
+            CellBuffer buffer = new CellBuffer(content.Length, max);
 
             foreach (var line in content)
             {
                 charId = 0;
                 foreach (var c in line)
                 {
-                    buffer[lineId, charId].Char = (ushort)c;
-                    buffer[lineId, charId].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(ForegroundColor, BackgroundColor);
+                    buffer.Cells[lineId, charId].Char = (ushort)c;
+                    buffer.Cells[lineId, charId].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(ForegroundColor, BackgroundColor);
                     charId++;
                 }
             }
@@ -135,17 +135,17 @@ namespace dotCmd.Rendering
             WriteOutput(orgin, buffer);
         }
 
-        public void WriteOutput(Coordinates orgin, OutputCell[,] cellBuffer)
+        public void WriteOutput(Coordinates orgin, CellBuffer cellBuffer)
         {
             var handle = GetOutputBuffer();
 
             //Get len of X coordinate, the plan here is to partition by Y
-            var sizeOfX = cellBuffer.GetLength(1) * 4;
+            var sizeOfX = cellBuffer.GetLengthOfX() * 4;
 
             //partition by Y coordinate.
             int partitionY = (int)Math.Ceiling((decimal)(maxBufferSize / sizeOfX));
 
-            var sizeOfY = cellBuffer.GetLength(0);
+            var sizeOfY = cellBuffer.GetLengthOfY();
 
             //if Y is smaller then the partition by Y then we need 
             //to set the partiton size to Y size.
@@ -155,7 +155,7 @@ namespace dotCmd.Rendering
             }
 
             //Get partitoned buffer size.
-            int charBufferSize = (int)(partitionY * cellBuffer.GetLength(1));
+            int charBufferSize = (int)(partitionY * cellBuffer.GetLengthOfX());
 
             int cursor = 0;
             int i = 0;
@@ -175,7 +175,7 @@ namespace dotCmd.Rendering
                 int idx = 0;
                 for (int y = cursor; y < i; y++)
                 {
-                    for (int x = 0; x < cellBuffer.GetLength(1); x++)
+                    for (int x = 0; x < cellBuffer.GetLengthOfX(); x++)
                     {
                         var cellToWrite = cellBuffer[y, x];
 
@@ -193,7 +193,7 @@ namespace dotCmd.Rendering
                 }
 
                 ConsoleHostNativeMethods.COORD bufferSize = new ConsoleHostNativeMethods.COORD();
-                bufferSize.X = (short)cellBuffer.GetLength(1);
+                bufferSize.X = (short)cellBuffer.GetLengthOfX();
                 bufferSize.Y = (short)partitionY;
 
                 ConsoleHostNativeMethods.COORD bufferCoord = new ConsoleHostNativeMethods.COORD();
@@ -218,7 +218,7 @@ namespace dotCmd.Rendering
         /// </summary>
         /// <param name="region"></param>
         /// <returns></returns>
-        public OutputCell[,] ReadOutput(Region region)
+        public CellBuffer ReadOutput(Region region)
         {
             var handle = GetOutputBuffer();
 
@@ -244,7 +244,7 @@ namespace dotCmd.Rendering
             ConsoleHostNativeMethods.COORD bufferSize = new ConsoleHostNativeMethods.COORD();
             bufferSize.X = (short)(region.Width - region.Left + 1);
 
-            OutputCell[,] cells = new OutputCell[sizeOfY, bufferSize.X];
+            CellBuffer cells = new CellBuffer(sizeOfY, bufferSize.X);
 
             int cursor = 0;
             int i = 0;
@@ -280,8 +280,8 @@ namespace dotCmd.Rendering
                 {
                     for (int n = 0; n < bufferSize.X; n++)
                     {
-                        cells[k, n].Attributes = buffer[idx].Attributes;
-                        cells[k, n].Char = buffer[idx].UnicodeChar;
+                        cells.Cells[k, n].Attributes = buffer[idx].Attributes;
+                        cells.Cells[k, n].Char = buffer[idx].UnicodeChar;
                         idx++;
                     }
                     cursor = k;

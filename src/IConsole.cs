@@ -20,6 +20,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #endregion
+using dotCmd.DataStructures;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,10 +41,39 @@ namespace dotCmd
         int WriteLine(string text);
 
         /// <summary>
-        /// Updates a line of text using the relative line index of the output buffer.
+        /// Writes a line of text into the output buffer.
+        /// </summary>
+        /// <param name="text"></param>
+        int WriteLine(string text, Color backgroundColor, Color foregroundColor, bool fill);
+
+        /// <summary>
+        /// Alters the existing line with new text.
         /// </summary>
         /// <param name="text"></param>
         /// <param name="relativeLineId"></param>
-        int UpdateLine(string text, int relativeLineId);
+        /// <returns></returns>
+        int AlterLine(string text, int relativeLineId);
+   
+        /// <summary>
+        /// Alters the existing line with new text and depending on the [cleraFirst] param clears the whole line first.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="relativeLineId"></param>
+        /// <param name="fill"></param>
+        /// <returns></returns>
+        int AlterLine(string text, int relativeLineId, bool fill);
+     
+        /// <summary>
+        /// Alters the existing line at the specified column (X) position with new text and color palete.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="relativeLineId"></param>
+        /// <param name="relativeColumnId"></param>
+        /// <param name="backgroundColor"></param>
+        /// <param name="foregroundColor"></param>
+        /// <returns></returns>
+        int AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor);
+
+        
     }
 }
