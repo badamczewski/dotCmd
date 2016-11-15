@@ -50,8 +50,7 @@ namespace dotCmd
         private void Initialize()
         {
             renderer = new DotConsoleRenderer();
-            //Set main thread name.
-            System.Threading.Thread.CurrentThread.Name = ".Console host main thread";
+
             //Set encoding.
             Console.OutputEncoding = System.Text.Encoding.Unicode;
 
@@ -111,10 +110,21 @@ namespace dotCmd
         }
 
         /// <summary>
+        /// Writes text into the output buffer.
+        /// </summary>
+        /// <param name="text"></param>
+        public WriteRef Write(string text)
+        {
+            //Write to main region.
+            return main.Write(text);
+        }
+
+
+        /// <summary>
         /// Writes a line of text into the output buffer.
         /// </summary>
         /// <param name="text"></param>
-        public int WriteLine(string text)
+        public WriteRef WriteLine(string text)
         {
             //Write to main region.
             return main.WriteLine(text);
@@ -124,7 +134,7 @@ namespace dotCmd
         /// Writes a line of text into the output buffer.
         /// </summary>
         /// <param name="text"></param>
-        public int WriteLine(string text, Color backgroundColor, Color foregroundColor, bool fill)
+        public WriteRef WriteLine(string text, Color backgroundColor, Color foregroundColor, bool fill)
         {
             return main.WriteLine(text, backgroundColor, foregroundColor, fill);
         }
@@ -135,7 +145,7 @@ namespace dotCmd
         /// <param name="text"></param>
         /// <param name="relativeLineId"></param>
         /// <returns></returns>
-        public int AlterLine(string text, int relativeLineId)
+        public WriteRef AlterLine(string text, int relativeLineId)
         {
             return main.AlterLine(text, relativeLineId);
         }
@@ -147,7 +157,7 @@ namespace dotCmd
         /// <param name="relativeLineId"></param>
         /// <param name="clearFirst"></param>
         /// <returns></returns>
-        public int AlterLine(string text, int relativeLineId, bool clearFirst)
+        public WriteRef AlterLine(string text, int relativeLineId, bool clearFirst)
         {
             return main.AlterLine(text, relativeLineId, clearFirst);
         }
@@ -161,7 +171,7 @@ namespace dotCmd
         /// <param name="backgroundColor"></param>
         /// <param name="foregroundColor"></param>
         /// <returns></returns>
-        public int AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor)
+        public WriteRef AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor)
         {
             return main.AlterLine(text, relativeLineId, relativeColumnId, columnLength, backgroundColor, foregroundColor);
         }

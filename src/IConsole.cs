@@ -35,16 +35,23 @@ namespace dotCmd
     public interface IConsole
     {
         /// <summary>
-        /// Writes a line of text into the output buffer.
+        /// Writes text into the output buffer.
         /// </summary>
         /// <param name="text"></param>
-        int WriteLine(string text);
+        /// <returns></returns>
+        WriteRef Write(string text);
 
         /// <summary>
         /// Writes a line of text into the output buffer.
         /// </summary>
         /// <param name="text"></param>
-        int WriteLine(string text, Color backgroundColor, Color foregroundColor, bool fill);
+        WriteRef WriteLine(string text);
+
+        /// <summary>
+        /// Writes a line of text into the output buffer and depending on the [fill] param clears and fills the whole line first with selected colors.
+        /// </summary>
+        /// <param name="text"></param>
+        WriteRef WriteLine(string text, Color backgroundColor, Color foregroundColor, bool fill);
 
         /// <summary>
         /// Alters the existing line with new text.
@@ -52,16 +59,16 @@ namespace dotCmd
         /// <param name="text"></param>
         /// <param name="relativeLineId"></param>
         /// <returns></returns>
-        int AlterLine(string text, int relativeLineId);
+        WriteRef AlterLine(string text, int relativeLineId);
    
         /// <summary>
-        /// Alters the existing line with new text and depending on the [cleraFirst] param clears the whole line first.
+        /// Alters the existing line with new text and depending on the [fill] param clears and fills the whole line first with selected colors.
         /// </summary>
         /// <param name="text"></param>
         /// <param name="relativeLineId"></param>
         /// <param name="fill"></param>
         /// <returns></returns>
-        int AlterLine(string text, int relativeLineId, bool fill);
+        WriteRef AlterLine(string text, int relativeLineId, bool fill);
      
         /// <summary>
         /// Alters the existing line at the specified column (X) position with new text and color palete.
@@ -72,7 +79,7 @@ namespace dotCmd
         /// <param name="backgroundColor"></param>
         /// <param name="foregroundColor"></param>
         /// <returns></returns>
-        int AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor);
+        WriteRef AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor);
 
         
     }

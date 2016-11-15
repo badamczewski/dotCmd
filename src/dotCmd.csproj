@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="DataStructures\CellBuffer.cs" />
     <Compile Include="DataStructures\Color.cs" />
+    <Compile Include="DataStructures\WriteRef.cs" />
     <Compile Include="DotConsoleRegion.cs" />
     <Compile Include="DataStructures\Coordinates.cs" />
     <Compile Include="DotConsole.cs" />

@@ -203,8 +203,8 @@ namespace dotCmd.Rendering
                 ConsoleHostNativeMethods.SMALL_RECT writeRegion = new ConsoleHostNativeMethods.SMALL_RECT();
                 writeRegion.Left = (short)orgin.X;
                 writeRegion.Top = (short)(orgin.Y + cursor);
-                writeRegion.Right = (short)(orgin.X + bufferSize.X - 1);
-                writeRegion.Bottom = (short)(orgin.Y + cursor + bufferSize.Y - 1);
+                writeRegion.Right = (short)(orgin.X + bufferSize.X);
+                writeRegion.Bottom = (short)(orgin.Y + cursor + bufferSize.Y);
 
                 DotConsoleNative.WriteConsoleOutput(handle, buffer, bufferSize, bufferCoord, ref writeRegion);
 
@@ -228,7 +228,7 @@ namespace dotCmd.Rendering
             //partition by Y coordinate.
             var partitionY = (int)Math.Ceiling((decimal)(maxBufferSize / sizeOfX));
 
-            int sizeOfY = (region.Height - region.Top + 1);
+            int sizeOfY = (region.Height - region.Top);
 
             //if Y is smaller then the partition by Y then we need 
             //to set the partiton size to Y size.
@@ -242,7 +242,7 @@ namespace dotCmd.Rendering
             bufferCoord.Y = 0;
 
             ConsoleHostNativeMethods.COORD bufferSize = new ConsoleHostNativeMethods.COORD();
-            bufferSize.X = (short)(region.Width - region.Left + 1);
+            bufferSize.X = (short)(region.Width - region.Left);
 
             CellBuffer cells = new CellBuffer(sizeOfY, bufferSize.X);
 
@@ -253,7 +253,7 @@ namespace dotCmd.Rendering
                 i += partitionY;
 
                 //the size of the Y coordinate is always the size of the buffer.
-                bufferSize.X = (short)(region.Width - region.Left + 1);
+                bufferSize.X = (short)(region.Width - region.Left);
                 bufferSize.Y = (short)partitionY;
 
                 //If we exceeded the maximum size of the buffer we need to substract to the size of the remaining buffer.
@@ -268,8 +268,8 @@ namespace dotCmd.Rendering
 
                 readRegion.Left = (short)region.Left;
                 readRegion.Top = (short)region.Top;
-                readRegion.Right = (short)(region.Left + bufferSize.X - 1);
-                readRegion.Bottom = (short)(region.Top + bufferSize.Y - 1);
+                readRegion.Right = (short)(region.Left + bufferSize.X);
+                readRegion.Bottom = (short)(region.Top + bufferSize.Y);
 
                 ConsoleHostNativeMethods.CHAR_INFO[] buffer = new ConsoleHostNativeMethods.CHAR_INFO[bufferSize.X * bufferSize.Y];
                 buffer = DotConsoleNative.ReadConsoleOutput(handle, buffer, bufferSize, bufferCoord, ref readRegion);

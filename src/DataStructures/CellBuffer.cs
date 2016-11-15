@@ -51,7 +51,7 @@ namespace dotCmd.DataStructures
         /// This debug proxy makes it easier to debug any sort of off by one errors
         /// when persisiting a buffer to console host.
         /// </summary>
-        internal class CellBufferDebugView
+        public class CellBufferDebugView
         {
             private CellBuffer buffer;
 

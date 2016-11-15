@@ -213,10 +213,27 @@ namespace dotCmd
         }
 
         /// <summary>
+        /// Writes text into the output buffer.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public WriteRef Write(string text)
+        {
+            AlterLine(text, this.CurrentBufferSize.Y, this.CurrentBufferSize.X, text.Length, this.BackgroundColor, this.ForegroundColor);
+
+            var @ref = new WriteRef(this.CurrentBufferSize.Y, this.CurrentBufferSize.X, text.Length);
+
+            CurrentBufferSize.X += text.Length;
+
+            return @ref;
+
+        }
+
+        /// <summary>
         /// Writes a line of text into the output buffer.
         /// </summary>
         /// <param name="text"></param>
-        public int WriteLine(string text)
+        public WriteRef WriteLine(string text)
         {
             return WriteLine(text, this.BackgroundColor, this.ForegroundColor, false);
         }
@@ -225,7 +242,7 @@ namespace dotCmd
         /// Writes a line of text into the output buffer.
         /// </summary>
         /// <param name="text"></param>
-        public int WriteLine(string text, Color backgroundColor, Color foregroundColor, bool fill)
+        public WriteRef WriteLine(string text, Color backgroundColor, Color foregroundColor, bool fill)
         {
             PreRender();
 
@@ -242,7 +259,7 @@ namespace dotCmd
 
             PostRender();
 
-            return lineId;
+            return new WriteRef(lineId, this.CurrentBufferSize.X, text.Length);
         }
 
         /// <summary>
@@ -251,7 +268,7 @@ namespace dotCmd
         /// <param name="text"></param>
         /// <param name="relativeLineId"></param>
         /// <returns></returns>
-        public int AlterLine(string text, int relativeLineId)
+        public WriteRef AlterLine(string text, int relativeLineId)
         {
             return AlterLine(text, relativeLineId, 0, text.Length, this.BackgroundColor, this.ForegroundColor);
         }
@@ -263,7 +280,7 @@ namespace dotCmd
         /// <param name="relativeLineId"></param>
         /// <param name="fill"></param>
         /// <returns></returns>
-        public int AlterLine(string text, int relativeLineId, bool fill)
+        public WriteRef AlterLine(string text, int relativeLineId, bool fill)
         {
             int len = fill ? this.BufferSize.X : text.Length;
 
@@ -280,7 +297,7 @@ namespace dotCmd
         /// <param name="backgroundColor"></param>
         /// <param name="foregroundColor"></param>
         /// <returns></returns>
-        public int AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor)
+        public WriteRef AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor)
         {
             PreRender();
 
@@ -297,7 +314,7 @@ namespace dotCmd
 
             PostRender();
 
-            return relativeLineId;
+            return new WriteRef(relativeLineId, relativeColumnId, columnLength);
         }
 
         /// <summary>
@@ -307,6 +324,7 @@ namespace dotCmd
         private int WriteLineToBuffer(string text, bool fill)
         {
             var lineId = 0;
+            var colId = this.CurrentBufferSize.X;
             int len = fill ? BufferSize.X : text.Length;
             var window = consoleRenderer.GetOutputBufferWindow();
 
@@ -314,10 +332,9 @@ namespace dotCmd
             {
                 lineId = CurrentBufferSize.Y;
 
-                FillBuffer(text,  lineId, 0, len);
+                FillBuffer(text,  lineId, colId, len);
                 
                 CurrentBufferSize.Y++;
-                CurrentBufferSize.X = text.Length;
             }
             else
             {
@@ -328,9 +345,7 @@ namespace dotCmd
 
                 this.contentBuffer.Cells = @new;
                 lineId = CurrentBufferSize.Y - 1;
-                FillBuffer(text, lineId, 0, len);
-                CurrentBufferSize.X = text.Length;
-
+                FillBuffer(text, lineId, colId, len);
             }
 
             return lineId;
@@ -359,8 +374,8 @@ namespace dotCmd
 
         internal void Render(Region window, DotConsoleRegion owner)
         {
-            int height = Orgin.Y + window.Top + (contentBuffer.GetLengthOfY() - 1);
-            int width = Orgin.X + window.Left + (contentBuffer.GetLengthOfX() - 1);
+            int height = Orgin.Y + window.Top + (contentBuffer.GetLengthOfY());
+            int width = Orgin.X + window.Left + (contentBuffer.GetLengthOfX());
 
             int top = Orgin.Y + window.Top;
             int left = Orgin.X + window.Left;
@@ -373,7 +388,7 @@ namespace dotCmd
                 int sizeOfY = contentBuffer.GetLengthOfY();
 
                 if (sizeOfY < window.Height)
-                    top = window.Height - Orgin.Y - (contentBuffer.GetLengthOfY() - 1);
+                    top = window.Height - Orgin.Y - (contentBuffer.GetLengthOfY());
             }
 
             if (scroll == true)
@@ -386,7 +401,7 @@ namespace dotCmd
                 savedContentBuffer = null;
                 if (owner != null)
                 {
-                    savedContentBuffer = RestoreToContentRegion(owner, new Region() { Left = left, Top = top, Height = height, Width = width });
+                    savedContentBuffer = Restore(owner, new Region() { Left = left, Top = top, Height = height, Width = width });
                 }
                 else
                 {
@@ -399,7 +414,7 @@ namespace dotCmd
 
             if (owner != null)
             {
-                RenderToContentRegion(owner, this.contentBuffer);
+                Merge(owner.contentBuffer, this.contentBuffer);
             }
             else
             {             
@@ -424,7 +439,7 @@ namespace dotCmd
             {
                 if (owner != null)
                 {
-                    RenderToContentRegion(owner, savedContentBuffer);
+                    Merge(owner.contentBuffer, savedContentBuffer);
                 }
                 else
                 {
@@ -433,16 +448,20 @@ namespace dotCmd
             }
         }
 
-        private CellBuffer RestoreToContentRegion(DotConsoleRegion owner, Region region)
+        private CellBuffer Restore(DotConsoleRegion owner, Region region)
         {
             CellBuffer result = new CellBuffer(this.BufferSize.Y, this.BufferSize.X);
 
             int resultY = 0;
             int resultX = 0;
-            for (int y = region.Top; y <= region.Top + (region.Height - region.Top); y++)
+
+            int height = region.Top + (region.Height - region.Top);
+            int width = region.Left + (region.Width - region.Left);
+
+            for (int y = region.Top; y < height; y++)
             {
                 resultX = 0;
-                for (int x = region.Left; x <= region.Left + (region.Width - region.Left); x++)
+                for (int x = region.Left; x < width; x++)
                 {
                     result[resultY, resultX] = owner.contentBuffer[y, x];
                     resultX++;
@@ -454,13 +473,13 @@ namespace dotCmd
             return result;
         }
 
-        private void RenderToContentRegion(DotConsoleRegion owner, CellBuffer source)
+        private void Merge(CellBuffer target, CellBuffer source)
         {
             for (int y = 0; y < this.BufferSize.Y; y++)
             {
                 for (int x = 0; x < this.BufferSize.X; x++)
                 {
-                    owner.contentBuffer[savedCoordsWithOffset.Y + y, savedCoordsWithOffset.X + x] = source[y, x];
+                    target[savedCoordsWithOffset.Y + y, savedCoordsWithOffset.X + x] = source[y, x];
                 }
             }
         }
