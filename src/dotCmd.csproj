@@ -53,6 +53,7 @@
     <Compile Include="DotConsole.cs" />
     <Compile Include="IConsole.cs" />
     <Compile Include="Rendering\ColorMap.cs" />
+    <Compile Include="Rendering\DotConsoleInputProcessor.cs" />
     <Compile Include="Rendering\DotConsoleRenderer.cs" />
     <Compile Include="Rendering\IConsoleRenderer.cs" />
     <Compile Include="Native\BreakHandler.cs" />

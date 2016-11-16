@@ -119,7 +119,6 @@ namespace dotCmd
             return main.Write(text);
         }
 
-
         /// <summary>
         /// Writes a line of text into the output buffer.
         /// </summary>
@@ -176,7 +175,6 @@ namespace dotCmd
             return main.AlterLine(text, relativeLineId, relativeColumnId, columnLength, backgroundColor, foregroundColor);
         }
  
-
         private void SetForegroundColors(Color value)
         {
             main.ForegroundColor = value;

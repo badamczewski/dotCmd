@@ -76,9 +76,11 @@ namespace dotCmd
         private CellBuffer savedContentBuffer = null;
         private CellBuffer contentBuffer = null;
         private Coordinates savedCoordsWithOffset;
+        private Coordinates savedCursorPosition;
 
-        private IConsoleRenderer consoleRenderer;
+        public IConsoleRenderer ConsoleRenderer { get; set; }
         private ContentPosition position;
+       
 
         private List<DotConsoleRegion> regions = new List<DotConsoleRegion>();
         private DotConsoleRegion parent = null;
@@ -96,7 +98,7 @@ namespace dotCmd
         //This constructor is used by Dotconsole to register the main buffer within it.
         internal DotConsoleRegion(IConsoleRenderer consoleRenderer, Coordinates bufferSize) 
         {
-            this.consoleRenderer = consoleRenderer;
+            this.ConsoleRenderer = consoleRenderer;
   
             this.BufferSize = bufferSize;
             this.Orgin = new Coordinates(0, 0);
@@ -117,7 +119,7 @@ namespace dotCmd
             Color backgroundColor = default(Color),
             Color foregroundColor = default(Color))
         {
-            this.consoleRenderer = console;
+            this.ConsoleRenderer = console;
             this.BufferSize = bufferSize;
             this.Orgin = orgin;
             this.position = position;
@@ -169,7 +171,7 @@ namespace dotCmd
                 CalculateCursorBetweenRegions();
             }
 
-            var wnd = consoleRenderer.GetOutputBufferWindow();
+            var wnd = ConsoleRenderer.GetOutputBufferWindow();
 
             //Show content regions.
             foreach (var region in regions)
@@ -179,15 +181,20 @@ namespace dotCmd
         }
 
         /// <summary>
-        /// Calculates where to put the cursor, it picks the maximum buffer corrdintates for any ContentRegion.
+        /// Calculates where to put the cursor.
         /// </summary>
         internal void CalculateCursorBetweenRegions()
         {
+            var wnd = ConsoleRenderer.GetOutputBufferWindow();
+
             //Pick the max buffer size and scroll to that spot, this is mainly done to reducre the flickering.
             var maxY = -1;
             var maxX = -1;
             DotConsoleRegion maxYRegion = null;
             int current = maxY;
+
+            //Always pick the parent if child regions don't need to scroll the window.
+            var wndY = wnd.Top + wnd.Height;
 
             foreach (var region in regions)
             {
@@ -200,7 +207,13 @@ namespace dotCmd
             }
 
             current = this.CurrentBufferSize.Y + this.Orgin.Y;
+          
             if (current > maxY)
+            {
+                maxYRegion = this;
+                maxY = current;
+            }
+            else if(maxY < wndY)
             {
                 maxYRegion = this;
                 maxY = current;
@@ -209,7 +222,13 @@ namespace dotCmd
             //Once we have the region with the biggest value of Y we use it's X coordinate.
             maxX = Math.Min(maxYRegion.CurrentBufferSize.X + maxYRegion.Orgin.X, maxYRegion.BufferSize.X);
 
-            consoleRenderer.SetCursorPosition(new Coordinates() { X = Math.Max(maxX - 1, 0), Y = Math.Max(maxY - 1, 0) });
+            var position = new Coordinates() { X = Math.Min(maxX, maxYRegion.BufferSize.X - 1), Y = Math.Min(maxY, maxYRegion.BufferSize.Y - 1) };
+
+            if (savedCursorPosition.X != position.X || savedCursorPosition.Y != position.Y)
+            {
+                ConsoleRenderer.SetCursorPosition(position);
+                savedCursorPosition = position;
+            }
         }
 
         /// <summary>
@@ -326,7 +345,7 @@ namespace dotCmd
             var lineId = 0;
             var colId = this.CurrentBufferSize.X;
             int len = fill ? BufferSize.X : text.Length;
-            var window = consoleRenderer.GetOutputBufferWindow();
+            var window = ConsoleRenderer.GetOutputBufferWindow();
 
             if (BufferSize.Y > CurrentBufferSize.Y)
             {
@@ -356,11 +375,12 @@ namespace dotCmd
         /// </summary>
         public void Render(RenderingStrategy strategy)
         {
-             var window = consoleRenderer.GetOutputBufferWindow();
+             var window = ConsoleRenderer.GetOutputBufferWindow();
 
             //Go up the chain to root and render there.
              if (strategy == RenderingStrategy.BubbleUp)
              {
+                 Restore(parent);
                  Render(window, parent);
                  //If there's no parent then we are root and we need to render here.
                  if (parent != null)
@@ -368,6 +388,7 @@ namespace dotCmd
              }
              else if(strategy == RenderingStrategy.RenderHere)
              {
+                 Restore(null);
                  Render(window, null);
              }
         }
@@ -405,7 +426,7 @@ namespace dotCmd
                 }
                 else
                 {
-                    savedContentBuffer = consoleRenderer.ReadOutput(new Region() { Left = left, Top = top, Height = height, Width = width });
+                    savedContentBuffer = ConsoleRenderer.ReadOutput(new Region() { Left = left, Top = top, Height = height, Width = width });
                 }
             }
 
@@ -418,7 +439,7 @@ namespace dotCmd
             }
             else
             {             
-                consoleRenderer.WriteOutput(savedCoordsWithOffset, this.contentBuffer);
+                ConsoleRenderer.WriteOutput(savedCoordsWithOffset, this.contentBuffer);
             }
         }
 
@@ -443,7 +464,7 @@ namespace dotCmd
                 }
                 else
                 {
-                    consoleRenderer.WriteOutput(savedCoordsWithOffset, savedContentBuffer);
+                    ConsoleRenderer.WriteOutput(savedCoordsWithOffset, savedContentBuffer);
                 }
             }
         }
@@ -489,19 +510,19 @@ namespace dotCmd
             //TODO Move this code out of here to ColorMap.
             ConsoleColor fc = ConsoleColor.White;
             ConsoleColor bc = ConsoleColor.Black;
-            bool fcInMap = consoleRenderer.ColorMap.TryGetMappedColor(this.ForegroundColor, out fc);
-            bool bcInMap = consoleRenderer.ColorMap.TryGetMappedColor(this.BackgroundColor, out bc);
+            bool fcInMap = ConsoleRenderer.ColorMap.TryGetMappedColor(this.ForegroundColor, out fc);
+            bool bcInMap = ConsoleRenderer.ColorMap.TryGetMappedColor(this.BackgroundColor, out bc);
 
             if (fcInMap == false) //add this color to map.
             {
-                consoleRenderer.ColorMap.AddColor(this.ForegroundColor);
-                consoleRenderer.ColorMap.TryGetMappedColor(this.ForegroundColor, out fc);
+                ConsoleRenderer.ColorMap.AddColor(this.ForegroundColor);
+                ConsoleRenderer.ColorMap.TryGetMappedColor(this.ForegroundColor, out fc);
             }
 
             if(bcInMap == false)
             {
-                consoleRenderer.ColorMap.AddColor(this.BackgroundColor);
-                consoleRenderer.ColorMap.TryGetMappedColor(this.BackgroundColor, out bc);
+                ConsoleRenderer.ColorMap.AddColor(this.BackgroundColor);
+                ConsoleRenderer.ColorMap.TryGetMappedColor(this.BackgroundColor, out bc);
             }
 
             int textIndex = 0;

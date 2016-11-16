@@ -106,6 +106,17 @@ namespace dotCmd.Native
             ref SMALL_RECT writeRegion
         );
 
+
+        [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool ReadConsole
+        (
+            IntPtr consoleInput,
+            StringBuilder buffer,
+            uint numberOfCharsToRead,
+            out uint numberOfCharsRead,
+            ref CONSOLE_READCONSOLE_CONTROL controlData
+        );
+
         [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool SetConsoleCursorPosition
         (
@@ -152,6 +163,15 @@ namespace dotCmd.Native
             public COLORREF magenta;
             public COLORREF yellow;
             public COLORREF white;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct CONSOLE_READCONSOLE_CONTROL
+        {
+            public uint length;
+            public uint initialChars;
+            public uint ctrlWakeupMask;
+            public uint controlKeyState;
         }
 
         [StructLayout(LayoutKind.Sequential)]

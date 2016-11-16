@@ -59,6 +59,61 @@ namespace dotCmd.Native
             return handle;
         }
 
+        internal static SafeFileHandle CreateInputBuffer()
+        {
+            //We dont use GetStdHandle since it might return a redirected handle, so use the bare bones function.
+
+            var handle = ConsoleHostNativeMethods.CreateFile(
+                           "CONIN$",
+                           (UInt32)(ConsoleHostNativeMethods.DesiredAccess.GenericRead | ConsoleHostNativeMethods.DesiredAccess.GenericWrite),
+                           (UInt32)ConsoleHostNativeMethods.ShareMode.ShareWrite,
+                           (IntPtr)0,
+                           (UInt32)ConsoleHostNativeMethods.CreationDisposition.OpenExisting,
+                           0,
+                           (IntPtr)0);
+
+            if (handle.IsInvalid)
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw CreateException("Cannot get the input buffer", err);
+            }
+
+            return handle;
+        }
+
+        internal static string ReadConsole(SafeFileHandle handle, string initialContent, int charsToRead, int? controlCharacter)
+        {
+            dotCmd.Native.ConsoleHostNativeMethods.CONSOLE_READCONSOLE_CONTROL readControl = new dotCmd.Native.ConsoleHostNativeMethods.CONSOLE_READCONSOLE_CONTROL();
+
+            readControl.length = (uint)Marshal.SizeOf(readControl);
+
+            if (initialContent != null)
+                readControl.initialChars = (uint)initialContent.Length;
+
+            readControl.controlKeyState = 0;
+
+            //Magic VOODO starts here.
+            //I've found almost no documentation how to set this mask to a given key
+            //from what I know it only supports control characters \n \b \t etc.
+            if (controlCharacter.HasValue)
+            {
+                readControl.ctrlWakeupMask = (uint)(1 << controlCharacter.Value);
+            }
+
+            StringBuilder buffer = new StringBuilder(initialContent, charsToRead);
+            uint charsRead = 0;
+
+            bool result = ConsoleHostNativeMethods.ReadConsole(handle.DangerousGetHandle(), buffer, (uint)charsToRead, out charsRead, ref readControl);
+
+            if (result == false)
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw CreateException("Cannot read from the input buffer", err);
+            }
+
+            return buffer.ToString(0, (int)charsRead);
+        }
+
         internal static dotCmd.Native.ConsoleHostNativeMethods.CHAR_INFO[] WriteConsoleOutput(
             SafeFileHandle handle,
             dotCmd.Native.ConsoleHostNativeMethods.CHAR_INFO[] buffer,

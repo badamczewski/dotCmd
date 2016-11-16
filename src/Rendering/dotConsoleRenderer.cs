@@ -43,7 +43,7 @@ namespace dotCmd.Rendering
         private const int maxBufferSize = 16384 / 4; //64K / 4 since the struct is 4 bytes in size
         //Create a single output buffer.
         private Lazy<SafeFileHandle> outputBuffer = new Lazy<SafeFileHandle>(DotConsoleNative.CreateOutputBuffer);
-
+        
         private ColorMap colorMap = null;
 
         public DotConsoleRenderer() {
@@ -300,7 +300,5 @@ namespace dotCmd.Rendering
         {
             return outputBuffer.Value;
         }
-
-
     }
 }
