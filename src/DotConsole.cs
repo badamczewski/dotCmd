@@ -174,6 +174,14 @@ namespace dotCmd
         {
             return main.AlterLine(text, relativeLineId, relativeColumnId, columnLength, backgroundColor, foregroundColor);
         }
+
+        /// <summary>
+        /// Clears the output buffer.
+        /// </summary>
+        public void Clear()
+        {
+            main.Clear();
+        }
  
         private void SetForegroundColors(Color value)
         {

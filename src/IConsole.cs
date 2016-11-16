@@ -60,7 +60,7 @@ namespace dotCmd
         /// <param name="relativeLineId"></param>
         /// <returns></returns>
         WriteRef AlterLine(string text, int relativeLineId);
-   
+
         /// <summary>
         /// Alters the existing line with new text and depending on the [fill] param clears and fills the whole line first with selected colors.
         /// </summary>
@@ -69,7 +69,7 @@ namespace dotCmd
         /// <param name="fill"></param>
         /// <returns></returns>
         WriteRef AlterLine(string text, int relativeLineId, bool fill);
-     
+
         /// <summary>
         /// Alters the existing line at the specified column (X) position with new text and color palete.
         /// </summary>
@@ -81,6 +81,9 @@ namespace dotCmd
         /// <returns></returns>
         WriteRef AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor);
 
-        
+        /// <summary>
+        /// Clears the output buffer.
+        /// </summary>
+        void Clear();
     }
 }

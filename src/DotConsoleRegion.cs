@@ -238,11 +238,15 @@ namespace dotCmd
         /// <returns></returns>
         public WriteRef Write(string text)
         {
+            PreRender();
+
             AlterLine(text, this.CurrentBufferSize.Y, this.CurrentBufferSize.X, text.Length, this.BackgroundColor, this.ForegroundColor);
 
             var @ref = new WriteRef(this.CurrentBufferSize.Y, this.CurrentBufferSize.X, text.Length);
 
             CurrentBufferSize.X += text.Length;
+
+            PostRender();
 
             return @ref;
 
@@ -334,6 +338,28 @@ namespace dotCmd
             PostRender();
 
             return new WriteRef(relativeLineId, relativeColumnId, columnLength);
+        }
+
+        /// <summary>
+        /// Clears the output buffer.
+        /// </summary>
+        public void Clear()
+        {
+            PreRender();
+
+            this.CurrentBufferSize.X = 0;
+            this.CurrentBufferSize.Y = 0;
+
+            for (int y = 0; y < this.contentBuffer.GetLengthOfY(); y++)
+            {
+                for(int x = 0; x < this.contentBuffer.GetLengthOfX(); x++)
+                {
+                    this.contentBuffer.Cells[y, x].Attributes = 0;
+                    this.contentBuffer.Cells[y,x].Char = 0;
+                }
+            }
+
+            PostRender();
         }
 
         /// <summary>
