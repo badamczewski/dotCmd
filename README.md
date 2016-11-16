@@ -21,7 +21,7 @@ dotCmd aims to give .NET developers a much more advanced console by using the Na
   <img src="https://cloud.githubusercontent.com/assets/752380/20129990/002c9830-a654-11e6-94cb-f4426a1ad7c7.gif" align="center" width="512">
 </p>
 
-- [Input buffer tab completion and context switching] - dotConsole can read console with custom completion control key (such as tab) and react on them. When combined with rehions, this enables us to create graphical suggestion providers. 
+- [Input buffer tab completion and context switching] - dotConsole can read console with custom completion control key (such as tab) and react on them. When combined with regions, this enables us to create graphical suggestion providers. 
 
 <p align="center">
   <img src="https://cloud.githubusercontent.com/assets/752380/20362548/4809ccc0-ac3c-11e6-8301-7b14ab516dfb.gif" align="center" width="512">
