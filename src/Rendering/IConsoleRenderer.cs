@@ -50,6 +50,12 @@ namespace dotCmd.Rendering
         void SetCursorPosition(Coordinates orgin);
 
         /// <summary>
+        /// Gets the cursor position.
+        /// </summary>
+        /// <param name="orgin"></param>
+        Coordinates GetCursorPosition();
+
+        /// <summary>
         /// Writes lines of text into the output buffer at a specified coordinates.
         /// </summary>
         /// <param name="orgin"></param>

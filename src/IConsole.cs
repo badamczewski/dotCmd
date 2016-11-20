@@ -42,6 +42,13 @@ namespace dotCmd
         WriteRef Write(string text);
 
         /// <summary>
+        /// Writes text into the output buffer and depending on the [fill] param clears and fills the whole line first with selected colors.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        WriteRef Write(string text, Color backgroundColor, Color foregroundColor, bool fill);
+
+        /// <summary>
         /// Writes a line of text into the output buffer.
         /// </summary>
         /// <param name="text"></param>
@@ -82,8 +89,44 @@ namespace dotCmd
         WriteRef AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor);
 
         /// <summary>
+        /// Reads data from the input buffer until a break key(s) is found.
+        /// </summary>
+        /// <returns></returns>
+        ReadRef Read();
+
+        /// <summary>
+        /// Reads a single key from the input buffer until a break key(s) is found.
+        /// </summary>
+        /// <returns></returns>
+        ReadRef ReadKey();
+
+        /// <summary>
         /// Clears the output buffer.
         /// </summary>
         void Clear();
+
+        /// <summary>
+        /// Sets the cursor position using the provided coordinates.
+        /// </summary>
+        /// <param name="orgin"></param>
+        void SetCursorPosition(Coordinates orgin);
+
+        /// <summary>
+        /// Gets the cursor position.
+        /// </summary>
+        /// <returns></returns>
+        Coordinates GetCursorPosition();
+
+        /// <summary>
+        /// Gets the buffer position.
+        /// </summary>
+        /// <returns></returns>
+        Coordinates GetBufferPosition();
+
+        /// <summary>
+        /// Sets the input buffer position using the provided coordinates.
+        /// </summary>
+        /// <param name="orgin"></param>
+        void SetBufferPosition(Coordinates orgin);
     }
 }

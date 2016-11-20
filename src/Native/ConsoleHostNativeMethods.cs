@@ -118,12 +118,66 @@ namespace dotCmd.Native
         );
 
         [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool ReadConsoleInput
+        (
+            IntPtr consoleInput,
+            [Out] INPUT_RECORD[] buffer,
+            uint length,
+            out uint numberOfEventsRead
+        );
+
+        [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool GetConsoleMode
+        (
+            IntPtr consoleHandle, 
+            out UInt32 mode
+        );
+
+        [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool SetConsoleMode
+        (
+            IntPtr consoleHandle,
+            UInt32 mode
+        );
+
+        [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool SetConsoleCursorPosition
         (
             IntPtr consoleOutput,
             COORD cursorPosition
         );
-        
+
+        [DllImport(DllImportNames.Kernel, SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool GetConsoleCursorInfo
+        (
+            IntPtr consoleOutput, 
+            out CONSOLE_CURSOR_INFO consoleCursorInfo);
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct INPUT_RECORD
+        {
+            public UInt16 EventType;
+            public KEY_EVENT_RECORD KeyEvent;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct CONSOLE_CURSOR_INFO
+        {
+            public uint size;
+            public bool visible;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct KEY_EVENT_RECORD
+        {
+            public bool keyDown;
+            public UInt16 repeatCount;
+            public UInt16 virtualKeyCode;
+            public UInt16 virtualScanCode;
+            public char unicodeChar;
+            public UInt16 controlKeyState;
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         internal struct CONSOLE_SCREEN_BUFFER_INFO
         {

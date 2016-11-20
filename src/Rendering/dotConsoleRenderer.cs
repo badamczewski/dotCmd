@@ -92,6 +92,18 @@ namespace dotCmd.Rendering
         }
 
         /// <summary>
+        /// Gets the cursos position.
+        /// </summary>
+        /// <returns></returns>
+        public Coordinates GetCursorPosition()
+        {
+            var buffer = GetOutputBuffer();
+            ConsoleHostNativeMethods.CONSOLE_SCREEN_BUFFER_INFO info = DotConsoleNative.GetConsoleScreenBufferInfo(buffer);
+
+            return new Coordinates(info.cursorPosition.X, info.cursorPosition.Y);
+        }
+
+        /// <summary>
         /// Sets the cursor position.
         /// </summary>
         /// <param name="orgin"></param>

@@ -79,9 +79,9 @@ namespace dotCmd
         private Coordinates savedCursorPosition;
 
         public IConsoleRenderer ConsoleRenderer { get; set; }
-        private ContentPosition position;
-       
+        public DotConsoleInputLoop InputLoop { get; set; }
 
+        private ContentPosition position;
         private List<DotConsoleRegion> regions = new List<DotConsoleRegion>();
         private DotConsoleRegion parent = null;
  
@@ -96,9 +96,12 @@ namespace dotCmd
         public Coordinates Orgin;
        
         //This constructor is used by Dotconsole to register the main buffer within it.
-        internal DotConsoleRegion(IConsoleRenderer consoleRenderer, Coordinates bufferSize) 
+        internal DotConsoleRegion(
+            IConsoleRenderer consoleRenderer, 
+            Coordinates bufferSize) 
         {
             this.ConsoleRenderer = consoleRenderer;
+            this.InputLoop = new DotConsoleInputLoop(this);
   
             this.BufferSize = bufferSize;
             this.Orgin = new Coordinates(0, 0);
@@ -114,7 +117,9 @@ namespace dotCmd
 
         public DotConsoleRegion(IConsoleRenderer console, 
             DotConsoleRegion parent,
-            Coordinates bufferSize, Coordinates orgin, ContentPosition position, 
+            Coordinates bufferSize, 
+            Coordinates orgin, 
+            ContentPosition position, 
             bool scroll = false,
             Color backgroundColor = default(Color),
             Color foregroundColor = default(Color))
@@ -125,6 +130,7 @@ namespace dotCmd
             this.position = position;
 
             this.contentBuffer = new CellBuffer(bufferSize.Y, bufferSize.X);
+            this.InputLoop = new DotConsoleInputLoop(this);
 
             this.scroll = scroll;
 
@@ -253,6 +259,38 @@ namespace dotCmd
         }
 
         /// <summary>
+        /// Writes text into the output buffer and depending on the [fill] param clears and fills the whole line first with selected colors.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public WriteRef Write(string text, Color backgroundColor, Color foregroundColor, bool fill)
+        {
+
+            PreRender();
+
+            int len = fill ? this.BufferSize.X : text.Length;
+
+            var fc = this.ForegroundColor;
+            this.ForegroundColor = foregroundColor;
+
+            var bc = this.BackgroundColor;
+            this.BackgroundColor = backgroundColor;
+
+            AlterLine(text, this.CurrentBufferSize.Y, this.CurrentBufferSize.X, len, this.BackgroundColor, this.ForegroundColor);
+
+            var @ref = new WriteRef(this.CurrentBufferSize.Y, this.CurrentBufferSize.X, text.Length);
+
+            CurrentBufferSize.X += text.Length;
+
+            this.ForegroundColor = fc;
+            this.BackgroundColor = bc;
+
+            PostRender();
+
+            return @ref;
+        }
+
+        /// <summary>
         /// Writes a line of text into the output buffer.
         /// </summary>
         /// <param name="text"></param>
@@ -268,6 +306,8 @@ namespace dotCmd
         public WriteRef WriteLine(string text, Color backgroundColor, Color foregroundColor, bool fill)
         {
             PreRender();
+
+            this.CurrentBufferSize.X = 0;
 
             var fc = this.ForegroundColor;
             this.ForegroundColor = foregroundColor;
@@ -340,6 +380,36 @@ namespace dotCmd
             return new WriteRef(relativeLineId, relativeColumnId, columnLength);
         }
 
+
+        /// <summary>
+        /// Reads data from the input buffer until a break key(s) is found.
+        /// </summary>
+        /// <returns></returns>
+        public ReadRef Read()
+        {
+            return InputLoop.ReadInput(
+                new InputOptions()
+                {
+                    BackgroundColor = this.BackgroundColor,
+                    ForegroundColor = this.ForegroundColor
+                });
+        }
+
+        /// <summary>
+        /// Reads a single key from the input buffer until a break key(s) is found.
+        /// </summary>
+        /// <returns></returns>
+        public ReadRef ReadKey()
+        {
+            return InputLoop.ReadInput(
+                new InputOptions()
+                {
+                    BackgroundColor = this.BackgroundColor,
+                    ForegroundColor = this.ForegroundColor,
+                    ReadLength = 1
+                });
+        }
+
         /// <summary>
         /// Clears the output buffer.
         /// </summary>
@@ -360,6 +430,44 @@ namespace dotCmd
             }
 
             PostRender();
+        }
+
+        /// <summary>
+        /// Sets the cursor position using the provided coordinates.
+        /// </summary>
+        /// <param name="orgin"></param>
+        public void SetCursorPosition(Coordinates orgin)
+        {
+            //Use the renderer.
+            this.ConsoleRenderer.SetCursorPosition(orgin);
+        }
+
+        /// <summary>
+        /// Gets the cursor position.
+        /// </summary>
+        /// <returns></returns>
+        public Coordinates GetCursorPosition()
+        {
+            //Use the renderer.
+            return this.ConsoleRenderer.GetCursorPosition();
+        }
+
+        /// <summary>
+        /// Gets the buffer position.
+        /// </summary>
+        /// <returns></returns>
+        public Coordinates GetBufferPosition()
+        {
+            return this.CurrentBufferSize;
+        }
+
+        /// <summary>
+        /// Sets the input buffer position using the provided coordinates.
+        /// </summary>
+        /// <param name="orgin"></param>
+        public void SetBufferPosition(Coordinates orgin)
+        {
+            this.CurrentBufferSize = orgin;
         }
 
         /// <summary>
@@ -557,11 +665,19 @@ namespace dotCmd
                 if (idx >= BufferSize.X)
                     break;
 
-                if (textIndex < text.Length)
-                    this.contentBuffer.Cells[row, idx].Char = (ushort)text[textIndex];
+                //Clear this char
+                if (text == null || text.Length == 0)
+                {
+                    this.contentBuffer.Cells[row, idx].Char = 0;
+                    this.contentBuffer.Cells[row, idx].Attributes = 0;
+                }
+                else
+                {
+                    if (textIndex < text.Length)
+                        this.contentBuffer.Cells[row, idx].Char = (ushort)text[textIndex];
 
-                this.contentBuffer.Cells[row, idx].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(fc, bc);
-
+                    this.contentBuffer.Cells[row, idx].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(fc, bc);
+                }
                 textIndex++;
             }
         

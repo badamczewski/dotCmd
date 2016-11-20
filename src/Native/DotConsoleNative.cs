@@ -81,6 +81,21 @@ namespace dotCmd.Native
             return handle;
         }
 
+        internal static dotCmd.Native.ConsoleHostNativeMethods.INPUT_RECORD[] ReadConsoleKeys(SafeFileHandle handle, int charsToRead, out uint recordsRead)
+        {
+            dotCmd.Native.ConsoleHostNativeMethods.INPUT_RECORD[] inputRecords = new dotCmd.Native.ConsoleHostNativeMethods.INPUT_RECORD[charsToRead];
+
+            bool result = ConsoleHostNativeMethods.ReadConsoleInput(handle.DangerousGetHandle(), inputRecords, (uint)inputRecords.Length, out recordsRead);
+
+            if (result == false)
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw CreateException("Cannot read key(s) from the input buffer", err);
+            }
+
+            return inputRecords;
+        }
+
         internal static string ReadConsole(SafeFileHandle handle, string initialContent, int charsToRead, int? controlCharacter)
         {
             dotCmd.Native.ConsoleHostNativeMethods.CONSOLE_READCONSOLE_CONTROL readControl = new dotCmd.Native.ConsoleHostNativeMethods.CONSOLE_READCONSOLE_CONTROL();

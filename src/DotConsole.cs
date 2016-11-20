@@ -120,6 +120,16 @@ namespace dotCmd
         }
 
         /// <summary>
+        /// Writes text into the output buffer and depending on the [fill] param clears and fills the whole line first with selected colors.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public WriteRef Write(string text, Color backgroundColor, Color foregroundColor, bool fill)
+        {
+            return main.Write(text, backgroundColor, foregroundColor, fill);
+        }
+
+        /// <summary>
         /// Writes a line of text into the output buffer.
         /// </summary>
         /// <param name="text"></param>
@@ -176,13 +186,69 @@ namespace dotCmd
         }
 
         /// <summary>
+        /// Reads data from the input buffer until a break key(s) is found.
+        /// </summary>
+        /// <returns></returns>
+        public ReadRef Read()
+        {
+            return main.Read();
+        }
+
+        /// <summary>
+        /// Reads a single key from the input buffer until a break key(s) is found.
+        /// </summary>
+        /// <returns></returns>
+        public ReadRef ReadKey()
+        {
+            return main.ReadKey();
+        }
+
+        /// <summary>
         /// Clears the output buffer.
         /// </summary>
         public void Clear()
         {
             main.Clear();
         }
- 
+
+        /// <summary>
+        /// Sets the cursor position using the provided coordinates.
+        /// </summary>
+        /// <param name="orgin"></param>
+        public void SetCursorPosition(Coordinates orgin)
+        {
+            //Use the renderer.
+            this.Renderer.SetCursorPosition(orgin);
+        }
+
+        /// <summary>
+        /// Gets the cursor position.
+        /// </summary>
+        /// <returns></returns>
+        public Coordinates GetCursorPosition()
+        {
+            //Use the renderer.
+            return this.Renderer.GetCursorPosition();
+        }
+
+        /// <summary>
+        /// Gets the buffer position.
+        /// </summary>
+        /// <returns></returns>
+        public Coordinates GetBufferPosition()
+        {
+            return this.main.GetBufferPosition();
+        }
+
+        /// <summary>
+        /// Sets the input buffer position using the provided coordinates.
+        /// </summary>
+        /// <param name="orgin"></param>
+        public void SetBufferPosition(Coordinates orgin)
+        {
+            this.main.SetBufferPosition(orgin);
+        }
+
         private void SetForegroundColors(Color value)
         {
             main.ForegroundColor = value;
@@ -208,5 +274,5 @@ namespace dotCmd
             Console.BackgroundColor = consoleColor;
             renderer.BackgroundColor = consoleColor;
         }
-   }
+    }
 }
