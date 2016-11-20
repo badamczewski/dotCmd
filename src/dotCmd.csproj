@@ -60,6 +60,7 @@
     <Compile Include="Rendering\ColorMap.cs" />
     <Compile Include="Rendering\DotConsoleInputProcessor.cs" />
     <Compile Include="Rendering\DotConsoleRenderer.cs" />
+    <Compile Include="Rendering\IConsoleInputLoop.cs" />
     <Compile Include="Rendering\IConsoleRenderer.cs" />
     <Compile Include="Native\BreakHandler.cs" />
     <Compile Include="Native\ConsoleHostNativeMethods.cs" />
@@ -74,6 +75,7 @@
       <Link>README.md</Link>
     </None>
     <None Include="App.config" />
+    <None Include="COPYING.LESSER" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
