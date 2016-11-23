@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 
 namespace dotCmd.DataStructures
 {
-    public struct InputOptions
+    public struct ReadOptions
     {
         public string InitialContent { get; set; }
         public int? ReadLength { get; set; }

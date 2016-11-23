@@ -20,6 +20,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #endregion
+using dotCmd.Controls;
 using dotCmd.DataStructures;
 using dotCmd.Native;
 using dotCmd.Rendering;
@@ -57,13 +58,21 @@ namespace dotCmd
             //Create the main content region.
             //This might not be the efficient way since content regions are extremly expensive so this may change.
             var size = renderer.GetOutputBufferWindowSize();
-            main = new DotConsoleRegion(renderer, size);
 
-            this.BackgroundColor = main.BackgroundColor;
-            this.ForegroundColor = main.ForegroundColor;
+            var options = new RegionCreationOptions(renderer, null, size);
+            options.WillScrollContent = true;
+            
+            main = new DotConsoleRegion(options);
+               
+            this.BackgroundColor = main.Options.BackgroundColor;
+            this.ForegroundColor = main.Options.ForegroundColor;
   
             Console.CursorVisible = true;
+
+            Controls = new List<IConsoleControl>();
         }
+
+        public IEnumerable<IConsoleControl> Controls { get; private set; }
 
         /// <summary>
         /// Gets the Console Renderer
@@ -183,6 +192,7 @@ namespace dotCmd
         public WriteRef AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor)
         {
             return main.AlterLine(text, relativeLineId, relativeColumnId, columnLength, backgroundColor, foregroundColor);
+
         }
 
         /// <summary>
@@ -192,6 +202,15 @@ namespace dotCmd
         public ReadRef Read()
         {
             return main.Read();
+        }
+
+        /// <summary>
+        /// Reads data from the input buffer until a break key(s) is found.
+        /// </summary>
+        /// <returns></returns>
+        public ReadRef Read(ReadOptions options)
+        {
+            return main.Read(options);
         }
 
         /// <summary>
@@ -247,6 +266,13 @@ namespace dotCmd
         public void SetBufferPosition(Coordinates orgin)
         {
             this.main.SetBufferPosition(orgin);
+        }
+
+        public void AddControl(IConsoleControl control)
+        {
+            control.Initialize(main);
+
+            ((List<IConsoleControl>)this.Controls).Add(control);
         }
 
         private void SetForegroundColors(Color value)

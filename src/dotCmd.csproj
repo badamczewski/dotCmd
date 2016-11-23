@@ -45,9 +45,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controls\IConsoleControl.cs" />
+    <Compile Include="Controls\ProgressBar.cs" />
     <Compile Include="DataStructures\CellBuffer.cs" />
     <Compile Include="DataStructures\Color.cs" />
-    <Compile Include="DataStructures\InputOptions.cs" />
+    <Compile Include="DataStructures\Options\ReadOptions.cs" />
+    <Compile Include="DataStructures\Options\RegionCreationOptions.cs" />
     <Compile Include="DataStructures\ReadRef.cs" />
     <Compile Include="DataStructures\WriteRef.cs" />
     <Compile Include="DotConsoleRegion.cs" />
@@ -58,7 +61,7 @@
     <Compile Include="Native\KeyEventType.cs" />
     <Compile Include="Native\VirtualInputCode.cs" />
     <Compile Include="Rendering\ColorMap.cs" />
-    <Compile Include="Rendering\DotConsoleInputProcessor.cs" />
+    <Compile Include="Rendering\DotConsoleInputLoop.cs" />
     <Compile Include="Rendering\DotConsoleRenderer.cs" />
     <Compile Include="Rendering\IConsoleInputLoop.cs" />
     <Compile Include="Rendering\IConsoleRenderer.cs" />

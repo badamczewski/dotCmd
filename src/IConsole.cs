@@ -95,6 +95,12 @@ namespace dotCmd
         ReadRef Read();
 
         /// <summary>
+        /// Reads data from the input buffer until a break key(s) is found.
+        /// </summary>
+        /// <returns></returns>
+        ReadRef Read(ReadOptions options);
+
+        /// <summary>
         /// Reads a single key from the input buffer until a break key(s) is found.
         /// </summary>
         /// <returns></returns>

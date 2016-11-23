@@ -73,75 +73,83 @@ namespace dotCmd
             RenderHere
         }
 
+        private List<DotConsoleRegion> regions = new List<DotConsoleRegion>();
+        private DotConsoleRegion parent = null;
+
         private CellBuffer savedContentBuffer = null;
         private CellBuffer contentBuffer = null;
         private Coordinates savedCoordsWithOffset;
         private Coordinates savedCursorPosition;
-
-        public IConsoleRenderer ConsoleRenderer { get; set; }
-        public DotConsoleInputLoop InputLoop { get; set; }
-
-        private ContentPosition position;
-        private List<DotConsoleRegion> regions = new List<DotConsoleRegion>();
-        private DotConsoleRegion parent = null;
- 
-        private bool scroll = false;
-
-        public Color BackgroundColor { get; set; }
-        public Color ForegroundColor { get; set; }
-
-        //Structs are hepas of fun but they make the worst properties so we just expose them as fields.
-        public Coordinates BufferSize; 
-        public Coordinates CurrentBufferSize; 
-        public Coordinates Orgin;
+        private Coordinates currentBufferSize;
        
-        //This constructor is used by Dotconsole to register the main buffer within it.
-        internal DotConsoleRegion(
-            IConsoleRenderer consoleRenderer, 
-            Coordinates bufferSize) 
-        {
-            this.ConsoleRenderer = consoleRenderer;
-            this.InputLoop = new DotConsoleInputLoop(this);
-  
-            this.BufferSize = bufferSize;
-            this.Orgin = new Coordinates(0, 0);
-            this.position = ContentPosition.Bottom;
-
-            this.contentBuffer = new CellBuffer(bufferSize.Y, bufferSize.X);
-
-            this.scroll = true;
-
-            this.BackgroundColor = new Color(0, 0, 80); 
-            this.ForegroundColor = new Color(255, 255, 255);
+        /// <summary>
+        /// Get the creation options of this Region.
+        /// </summary>
+        public RegionCreationOptions Options 
+        { 
+            get; private set; 
         }
 
-        public DotConsoleRegion(IConsoleRenderer console, 
-            DotConsoleRegion parent,
-            Coordinates bufferSize, 
-            Coordinates orgin, 
-            ContentPosition position, 
-            bool scroll = false,
-            Color backgroundColor = default(Color),
-            Color foregroundColor = default(Color))
+        /// <summary>
+        /// Gets the console renderer.
+        /// </summary>
+        public IConsoleRenderer Renderer
         {
-            this.ConsoleRenderer = console;
-            this.BufferSize = bufferSize;
-            this.Orgin = orgin;
-            this.position = position;
+            get { return Options.Renderer; }
+        }
 
-            this.contentBuffer = new CellBuffer(bufferSize.Y, bufferSize.X);
+        /// <summary>
+        /// Gets/Sets the console input loop.
+        /// </summary>
+        public IConsoleInputLoop InputLoop
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// Gets/Sets the region visibility.
+        /// </summary>
+        public bool IsVisible
+        {
+            get { return Options.IsVisible; }
+            set { Options.IsVisible = value; }
+        }
+
+        /// <summary>
+        /// Gets/Sets the Console Background Color.
+        /// </summary>
+        public Color BackgroundColor
+        {
+            get { return Options.BackgroundColor; }
+            set { Options.BackgroundColor = value; }
+        }
+
+        /// <summary>
+        /// Gets/Sets the Console Foreground Color.
+        /// </summary>
+        public Color ForegroundColor
+        {
+            get { return Options.ForegroundColor; }
+            set { Options.ForegroundColor = value; }
+        }
+
+       
+        public DotConsoleRegion(RegionCreationOptions config)
+        {
+            Options = config;
+  
+            this.contentBuffer = new CellBuffer(Options.BufferSize.Y, Options.BufferSize.X);
             this.InputLoop = new DotConsoleInputLoop(this);
 
-            this.scroll = scroll;
+            if (Options.ForegroundColor.Equals(default(Color)))
+                Options.ForegroundColor = new Color(255, 255, 255);
 
-            this.BackgroundColor = backgroundColor;
-            this.ForegroundColor = foregroundColor;
-
-            if (foregroundColor.Equals(default(Color)))
-                this.ForegroundColor = new Color(255, 255, 255);
-
-            this.parent = parent;
-            this.parent.RegisterRegion(this);
+            if (Options.Parent != null)
+            {
+                this.parent = config.Parent;
+                this.parent.RegisterRegion(this);
+            }
         }
 
         /// <summary>
@@ -154,17 +162,21 @@ namespace dotCmd
             this.regions.Add(region);
         }
 
-        private void PreRender()
+        public void PreRender()
         {
             //TODO we need to switch to double buffering using SetConsoleActiveScreenBuffer.
             //Hide contents and show oryginal contents under the region.
             foreach (var region in regions)
-                region.Restore(this);
+            {
+                if (region.IsVisible)
+                    region.Restore(this);
+            }
 
-            this.Restore(parent);
+            if (IsVisible)
+                this.Restore(parent);
         }
 
-        private void PostRender()
+        public void PostRender()
         {
             //Only root node should set the cursor.
             //Since all buffers have known positions we can pre set cursor position
@@ -177,13 +189,17 @@ namespace dotCmd
                 CalculateCursorBetweenRegions();
             }
 
-            var wnd = ConsoleRenderer.GetOutputBufferWindow();
+            var wnd = Renderer.GetOutputBufferWindow();
 
             //Show content regions.
             foreach (var region in regions)
-                region.Render(wnd, this);
+            {
+                if (region.IsVisible)
+                    region.Render(wnd, this);
+            }
 
-            this.Render(wnd, parent);
+            if (IsVisible)
+                this.Render(wnd, parent);
         }
 
         /// <summary>
@@ -191,7 +207,7 @@ namespace dotCmd
         /// </summary>
         internal void CalculateCursorBetweenRegions()
         {
-            var wnd = ConsoleRenderer.GetOutputBufferWindow();
+            var wnd = Renderer.GetOutputBufferWindow();
 
             //Pick the max buffer size and scroll to that spot, this is mainly done to reducre the flickering.
             var maxY = -1;
@@ -203,8 +219,8 @@ namespace dotCmd
             var wndY = wnd.Top + wnd.Height;
 
             foreach (var region in regions)
-            {
-                current = region.CurrentBufferSize.Y + region.Orgin.Y;
+            { 
+                current = region.currentBufferSize.Y + region.Options.Orgin.Y;
                 if (current > maxY)
                 {
                     maxY = current;
@@ -212,7 +228,7 @@ namespace dotCmd
                 }
             }
 
-            current = this.CurrentBufferSize.Y + this.Orgin.Y;
+            current = this.currentBufferSize.Y + Options.Orgin.Y;
           
             if (current > maxY)
             {
@@ -226,13 +242,13 @@ namespace dotCmd
             }
 
             //Once we have the region with the biggest value of Y we use it's X coordinate.
-            maxX = Math.Min(maxYRegion.CurrentBufferSize.X + maxYRegion.Orgin.X, maxYRegion.BufferSize.X);
+            maxX = Math.Min(maxYRegion.currentBufferSize.X + maxYRegion.Options.Orgin.X, maxYRegion.Options.BufferSize.X);
 
-            var position = new Coordinates() { X = Math.Min(maxX, maxYRegion.BufferSize.X - 1), Y = Math.Min(maxY, maxYRegion.BufferSize.Y - 1) };
+            var position = new Coordinates() { X = Math.Min(maxX, maxYRegion.Options.BufferSize.X - 1), Y = Math.Min(maxY, maxYRegion.Options.BufferSize.Y - 1) };
 
             if (savedCursorPosition.X != position.X || savedCursorPosition.Y != position.Y)
             {
-                ConsoleRenderer.SetCursorPosition(position);
+                Renderer.SetCursorPosition(position);
                 savedCursorPosition = position;
             }
         }
@@ -244,18 +260,7 @@ namespace dotCmd
         /// <returns></returns>
         public WriteRef Write(string text)
         {
-            PreRender();
-
-            AlterLine(text, this.CurrentBufferSize.Y, this.CurrentBufferSize.X, text.Length, this.BackgroundColor, this.ForegroundColor);
-
-            var @ref = new WriteRef(this.CurrentBufferSize.Y, this.CurrentBufferSize.X, text.Length);
-
-            CurrentBufferSize.X += text.Length;
-
-            PostRender();
-
-            return @ref;
-
+            return Write(text, BackgroundColor, ForegroundColor, false);
         }
 
         /// <summary>
@@ -265,27 +270,14 @@ namespace dotCmd
         /// <returns></returns>
         public WriteRef Write(string text, Color backgroundColor, Color foregroundColor, bool fill)
         {
+            int textLen = text != null ? text.Length : 0;
+            int len = fill ? Options.BufferSize.X : textLen;
 
-            PreRender();
+            AlterLine(text, this.currentBufferSize.Y, this.currentBufferSize.X, len, backgroundColor, foregroundColor);
 
-            int len = fill ? this.BufferSize.X : text.Length;
+            var @ref = new WriteRef(this.currentBufferSize.Y, this.currentBufferSize.X, textLen);
 
-            var fc = this.ForegroundColor;
-            this.ForegroundColor = foregroundColor;
-
-            var bc = this.BackgroundColor;
-            this.BackgroundColor = backgroundColor;
-
-            AlterLine(text, this.CurrentBufferSize.Y, this.CurrentBufferSize.X, len, this.BackgroundColor, this.ForegroundColor);
-
-            var @ref = new WriteRef(this.CurrentBufferSize.Y, this.CurrentBufferSize.X, text.Length);
-
-            CurrentBufferSize.X += text.Length;
-
-            this.ForegroundColor = fc;
-            this.BackgroundColor = bc;
-
-            PostRender();
+            currentBufferSize.X += text.Length;
 
             return @ref;
         }
@@ -296,7 +288,7 @@ namespace dotCmd
         /// <param name="text"></param>
         public WriteRef WriteLine(string text)
         {
-            return WriteLine(text, this.BackgroundColor, this.ForegroundColor, false);
+            return WriteLine(text, BackgroundColor, ForegroundColor, false);
         }
 
         /// <summary>
@@ -306,23 +298,28 @@ namespace dotCmd
         public WriteRef WriteLine(string text, Color backgroundColor, Color foregroundColor, bool fill)
         {
             PreRender();
+            try
+            {
+                this.currentBufferSize.X = 0;
 
-            this.CurrentBufferSize.X = 0;
+                //Back up colors.
+                var foregroundCopy = ForegroundColor;
+                var backgroundCopy = BackgroundColor;
+                ForegroundColor = foregroundColor;
+                BackgroundColor = backgroundColor;
 
-            var fc = this.ForegroundColor;
-            this.ForegroundColor = foregroundColor;
+                var lineId = WriteLineToBuffer(text, fill);
 
-            var bc = this.BackgroundColor;
-            this.BackgroundColor = backgroundColor;
+                //Restore Colors.
+                ForegroundColor = foregroundCopy;
+                BackgroundColor = backgroundCopy;
 
-            var lineId = WriteLineToBuffer(text, fill);
-
-            this.ForegroundColor = fc;
-            this.BackgroundColor = bc;
-
-            PostRender();
-
-            return new WriteRef(lineId, this.CurrentBufferSize.X, text.Length);
+                return new WriteRef(lineId, this.currentBufferSize.X, text != null ? text.Length : 0);
+            }
+            finally
+            {
+                PostRender();
+            }
         }
 
         /// <summary>
@@ -333,7 +330,7 @@ namespace dotCmd
         /// <returns></returns>
         public WriteRef AlterLine(string text, int relativeLineId)
         {
-            return AlterLine(text, relativeLineId, 0, text.Length, this.BackgroundColor, this.ForegroundColor);
+            return AlterLine(text, relativeLineId, 0, text.Length, BackgroundColor, ForegroundColor);
         }
 
         /// <summary>
@@ -345,9 +342,9 @@ namespace dotCmd
         /// <returns></returns>
         public WriteRef AlterLine(string text, int relativeLineId, bool fill)
         {
-            int len = fill ? this.BufferSize.X : text.Length;
+            int len = fill ? Options.BufferSize.X : text.Length;
 
-            return AlterLine(text, relativeLineId, 0, len, this.BackgroundColor, this.ForegroundColor);
+            return AlterLine(text, relativeLineId, 0, len, BackgroundColor, ForegroundColor);
         }
 
 
@@ -363,23 +360,30 @@ namespace dotCmd
         public WriteRef AlterLine(string text, int relativeLineId, int relativeColumnId, int columnLength, Color backgroundColor, Color foregroundColor)
         {
             PreRender();
+            try
+            {
+                //Back up colors.
+                var foregroundCopy = ForegroundColor;
+                var backgroundCopy = BackgroundColor;
+                ForegroundColor = foregroundColor;
+                BackgroundColor = backgroundColor;
 
-            var fc = this.ForegroundColor;
-            this.ForegroundColor = foregroundColor;
+                if (Options.BufferSize.Y > relativeLineId)
+                    FillBuffer(text, relativeLineId, relativeColumnId, columnLength);
+                else
+                    FillBuffer(text, relativeLineId - 1, relativeColumnId, columnLength);
 
-            var bc = this.BackgroundColor;
-            this.BackgroundColor = backgroundColor;
+                //Restore Colors.
+                ForegroundColor = foregroundCopy;
+                BackgroundColor = backgroundCopy;
 
-            FillBuffer(text, relativeLineId, relativeColumnId, columnLength);
-
-            this.ForegroundColor = fc;
-            this.BackgroundColor = bc;
-
-            PostRender();
-
-            return new WriteRef(relativeLineId, relativeColumnId, columnLength);
+                return new WriteRef(relativeLineId, relativeColumnId, columnLength);
+            }
+            finally
+            {
+                PostRender();
+            }
         }
-
 
         /// <summary>
         /// Reads data from the input buffer until a break key(s) is found.
@@ -388,11 +392,20 @@ namespace dotCmd
         public ReadRef Read()
         {
             return InputLoop.ReadInput(
-                new InputOptions()
+                new ReadOptions()
                 {
-                    BackgroundColor = this.BackgroundColor,
-                    ForegroundColor = this.ForegroundColor
+                    BackgroundColor = BackgroundColor,
+                    ForegroundColor = ForegroundColor
                 });
+        }
+
+        /// <summary>
+        /// Reads data from the input buffer until a break key(s) is found.
+        /// </summary>
+        /// <returns></returns>
+        public ReadRef Read(ReadOptions options)
+        {
+            return InputLoop.ReadInput(options);
         }
 
         /// <summary>
@@ -402,10 +415,10 @@ namespace dotCmd
         public ReadRef ReadKey()
         {
             return InputLoop.ReadInput(
-                new InputOptions()
+                new ReadOptions()
                 {
-                    BackgroundColor = this.BackgroundColor,
-                    ForegroundColor = this.ForegroundColor,
+                    BackgroundColor = BackgroundColor,
+                    ForegroundColor = ForegroundColor,
                     ReadLength = 1
                 });
         }
@@ -416,20 +429,24 @@ namespace dotCmd
         public void Clear()
         {
             PreRender();
-
-            this.CurrentBufferSize.X = 0;
-            this.CurrentBufferSize.Y = 0;
-
-            for (int y = 0; y < this.contentBuffer.GetLengthOfY(); y++)
+            try
             {
-                for(int x = 0; x < this.contentBuffer.GetLengthOfX(); x++)
+                this.currentBufferSize.X = 0;
+                this.currentBufferSize.Y = 0;
+
+                for (int y = 0; y < this.contentBuffer.GetLengthOfY(); y++)
                 {
-                    this.contentBuffer.Cells[y, x].Attributes = 0;
-                    this.contentBuffer.Cells[y,x].Char = 0;
+                    for (int x = 0; x < this.contentBuffer.GetLengthOfX(); x++)
+                    {
+                        this.contentBuffer.Cells[y, x].Attributes = 0;
+                        this.contentBuffer.Cells[y, x].Char = 0;
+                    }
                 }
             }
-
-            PostRender();
+            finally
+            {
+                PostRender();
+            }
         }
 
         /// <summary>
@@ -439,7 +456,7 @@ namespace dotCmd
         public void SetCursorPosition(Coordinates orgin)
         {
             //Use the renderer.
-            this.ConsoleRenderer.SetCursorPosition(orgin);
+            this.Renderer.SetCursorPosition(orgin);
         }
 
         /// <summary>
@@ -449,7 +466,7 @@ namespace dotCmd
         public Coordinates GetCursorPosition()
         {
             //Use the renderer.
-            return this.ConsoleRenderer.GetCursorPosition();
+            return this.Renderer.GetCursorPosition();
         }
 
         /// <summary>
@@ -458,7 +475,7 @@ namespace dotCmd
         /// <returns></returns>
         public Coordinates GetBufferPosition()
         {
-            return this.CurrentBufferSize;
+            return this.currentBufferSize;
         }
 
         /// <summary>
@@ -467,7 +484,7 @@ namespace dotCmd
         /// <param name="orgin"></param>
         public void SetBufferPosition(Coordinates orgin)
         {
-            this.CurrentBufferSize = orgin;
+            this.currentBufferSize = orgin;
         }
 
         /// <summary>
@@ -476,28 +493,30 @@ namespace dotCmd
         /// <param name="text"></param>
         private int WriteLineToBuffer(string text, bool fill)
         {
-            var lineId = 0;
-            var colId = this.CurrentBufferSize.X;
-            int len = fill ? BufferSize.X : text.Length;
-            var window = ConsoleRenderer.GetOutputBufferWindow();
+            var lineId = currentBufferSize.Y;
+            var colId =  currentBufferSize.X;
 
-            if (BufferSize.Y > CurrentBufferSize.Y)
+            int textLen = text != null ? text.Length : 0;
+            int len = fill ? Options.BufferSize.X : textLen;
+
+            var window = Renderer.GetOutputBufferWindow();
+
+            if (Options.BufferSize.Y > currentBufferSize.Y)
             {
-                lineId = CurrentBufferSize.Y;
-
-                FillBuffer(text,  lineId, colId, len);
+                FillBuffer(text, lineId, colId, len);
                 
-                CurrentBufferSize.Y++;
+                currentBufferSize.Y++;
             }
             else
             {
                 //Right shift the buffer.
-                var @new = new OutputCell[BufferSize.Y, BufferSize.X];
+                var @new = new OutputCell[Options.BufferSize.Y, Options.BufferSize.X];
                 
-                Array.Copy(contentBuffer.Cells, BufferSize.X, @new, 0, this.contentBuffer.Length - BufferSize.X);
+                Array.Copy(contentBuffer.Cells, Options.BufferSize.X, @new, 0, this.contentBuffer.Length - Options.BufferSize.X);
 
                 this.contentBuffer.Cells = @new;
-                lineId = CurrentBufferSize.Y - 1;
+                lineId = currentBufferSize.Y - 1;
+
                 FillBuffer(text, lineId, colId, len);
             }
 
@@ -509,7 +528,7 @@ namespace dotCmd
         /// </summary>
         public void Render(RenderingStrategy strategy)
         {
-             var window = ConsoleRenderer.GetOutputBufferWindow();
+             var window = Renderer.GetOutputBufferWindow();
 
             //Go up the chain to root and render there.
              if (strategy == RenderingStrategy.BubbleUp)
@@ -529,26 +548,26 @@ namespace dotCmd
 
         internal void Render(Region window, DotConsoleRegion owner)
         {
-            int height = Orgin.Y + window.Top + (contentBuffer.GetLengthOfY());
-            int width = Orgin.X + window.Left + (contentBuffer.GetLengthOfX());
+            int height = Options.Orgin.Y + window.Top + (contentBuffer.GetLengthOfY());
+            int width = Options.Orgin.X + window.Left + (contentBuffer.GetLengthOfX());
 
-            int top = Orgin.Y + window.Top;
-            int left = Orgin.X + window.Left;
+            int top = Options.Orgin.Y + window.Top;
+            int left = Options.Orgin.X + window.Left;
 
             //If we're rendering at the bottom the orgin moves the content up.
-            if (position == ContentPosition.Bottom)
+            if (Options.Position == ContentPosition.Bottom)
             {
-                height = window.Height - Orgin.Y;
+                height = window.Height - Options.Orgin.Y;
 
                 int sizeOfY = contentBuffer.GetLengthOfY();
 
                 if (sizeOfY < window.Height)
-                    top = window.Height - Orgin.Y - (contentBuffer.GetLengthOfY());
+                    top = window.Height - Options.Orgin.Y - (contentBuffer.GetLengthOfY());
             }
 
-            if (scroll == true)
+            if (Options.WillScrollContent == true)
             {
-                top = Orgin.Y;
+                top = Options.Orgin.Y;
             }
             //Scrollable content regions will not move with the window so theres no point to save state.
             else
@@ -560,7 +579,7 @@ namespace dotCmd
                 }
                 else
                 {
-                    savedContentBuffer = ConsoleRenderer.ReadOutput(new Region() { Left = left, Top = top, Height = height, Width = width });
+                    savedContentBuffer = Renderer.ReadOutput(new Region() { Left = left, Top = top, Height = height, Width = width });
                 }
             }
 
@@ -573,7 +592,7 @@ namespace dotCmd
             }
             else
             {             
-                ConsoleRenderer.WriteOutput(savedCoordsWithOffset, this.contentBuffer);
+                Renderer.WriteOutput(savedCoordsWithOffset, this.contentBuffer);
             }
         }
 
@@ -598,14 +617,14 @@ namespace dotCmd
                 }
                 else
                 {
-                    ConsoleRenderer.WriteOutput(savedCoordsWithOffset, savedContentBuffer);
+                    Renderer.WriteOutput(savedCoordsWithOffset, savedContentBuffer);
                 }
             }
         }
 
         private CellBuffer Restore(DotConsoleRegion owner, Region region)
         {
-            CellBuffer result = new CellBuffer(this.BufferSize.Y, this.BufferSize.X);
+            CellBuffer result = new CellBuffer(Options.BufferSize.Y, Options.BufferSize.X);
 
             int resultY = 0;
             int resultX = 0;
@@ -630,9 +649,9 @@ namespace dotCmd
 
         private void Merge(CellBuffer target, CellBuffer source)
         {
-            for (int y = 0; y < this.BufferSize.Y; y++)
+            for (int y = 0; y < Options.BufferSize.Y; y++)
             {
-                for (int x = 0; x < this.BufferSize.X; x++)
+                for (int x = 0; x < Options.BufferSize.X; x++)
                 {
                     target[savedCoordsWithOffset.Y + y, savedCoordsWithOffset.X + x] = source[y, x];
                 }
@@ -642,27 +661,27 @@ namespace dotCmd
         private void FillBuffer(string text, int row, int col, int colLen)
         {
             //TODO Move this code out of here to ColorMap.
-            ConsoleColor fc = ConsoleColor.White;
-            ConsoleColor bc = ConsoleColor.Black;
-            bool fcInMap = ConsoleRenderer.ColorMap.TryGetMappedColor(this.ForegroundColor, out fc);
-            bool bcInMap = ConsoleRenderer.ColorMap.TryGetMappedColor(this.BackgroundColor, out bc);
+            ConsoleColor foregroundCopy = ConsoleColor.White;
+            ConsoleColor backgroundCopy = ConsoleColor.Black;
+            bool fcInMap = Renderer.ColorMap.TryGetMappedColor(ForegroundColor, out foregroundCopy);
+            bool bcInMap = Renderer.ColorMap.TryGetMappedColor(BackgroundColor, out backgroundCopy);
 
             if (fcInMap == false) //add this color to map.
             {
-                ConsoleRenderer.ColorMap.AddColor(this.ForegroundColor);
-                ConsoleRenderer.ColorMap.TryGetMappedColor(this.ForegroundColor, out fc);
+                Renderer.ColorMap.AddColor(ForegroundColor);
+                Renderer.ColorMap.TryGetMappedColor(ForegroundColor, out foregroundCopy);
             }
 
             if(bcInMap == false)
             {
-                ConsoleRenderer.ColorMap.AddColor(this.BackgroundColor);
-                ConsoleRenderer.ColorMap.TryGetMappedColor(this.BackgroundColor, out bc);
+                Renderer.ColorMap.AddColor(BackgroundColor);
+                Renderer.ColorMap.TryGetMappedColor(BackgroundColor, out backgroundCopy);
             }
 
             int textIndex = 0;
             for (int idx = col; idx < col + colLen; idx++)
             {
-                if (idx >= BufferSize.X)
+                if (idx >= Options.BufferSize.X)
                     break;
 
                 //Clear this char
@@ -676,7 +695,7 @@ namespace dotCmd
                     if (textIndex < text.Length)
                         this.contentBuffer.Cells[row, idx].Char = (ushort)text[textIndex];
 
-                    this.contentBuffer.Cells[row, idx].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(fc, bc);
+                    this.contentBuffer.Cells[row, idx].Attributes = (ushort)DotConsoleNative.ToNativeConsoleColor(foregroundCopy, backgroundCopy);
                 }
                 textIndex++;
             }

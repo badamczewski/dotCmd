@@ -15,6 +15,6 @@ namespace dotCmd.Rendering
         /// <summary>
         /// Reads the input from the input buffer.
         /// </summary>
-        ReadRef ReadInput(InputOptions options);
+        ReadRef ReadInput(ReadOptions options);
     }
 }

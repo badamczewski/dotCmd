@@ -49,7 +49,7 @@ namespace dotCmd.Rendering
         /// <summary>
         /// Reads the input from the input buffer.
         /// </summary>
-        public ReadRef ReadInput(InputOptions options)
+        public ReadRef ReadInput(ReadOptions options)
         {
             var handle = GetInputBuffer();
             uint read = 0;
