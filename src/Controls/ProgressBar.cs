@@ -50,21 +50,26 @@ namespace dotCmd.Controls
             RegionCreationOptions init = new RegionCreationOptions(parent.Renderer, parent, bufferSize);
             init.Orgin = new Coordinates(0, 1);
             init.Position = DotConsoleRegion.ContentPosition.Top;
-            init.IsVisible = false;
-
-            init.BackgroundColor = new Color(100, 200, 200);
 
             progressBarRegion = new DotConsoleRegion(init);
         }
 
-        public void Show()
+        public Color BackgroundColor
         {
-            progressBarRegion.IsVisible = true;
+            get { return progressBarRegion.BackgroundColor; }
+            set { progressBarRegion.BackgroundColor = value; }
         }
 
-        public void Hide()
+        public Color ForegroundColor
         {
-            progressBarRegion.IsVisible = false;
+            get { return progressBarRegion.ForegroundColor; }
+            set { progressBarRegion.ForegroundColor = value; }
+        }
+
+        public bool IsVisible
+        {
+            get { return progressBarRegion.IsVisible; }
+            set { progressBarRegion.IsVisible = value; }
         }
 
         public void SetProgress(int progress)
